@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         B站 自动播放 & 网页全屏
-// @version      0.13
+// @version      0.14
 // @description  Bilibili Autoplay & FullScreen
 // @author       Erimus
 // @include      http*://*bilibili.com/video/*
@@ -13,10 +13,32 @@
 
     console.log('=== autoplay & fullscreen')
 
-    //把判断条件改为计数，防止网络不好时长时间Loading，或者播了数秒，判断为已播放，其实暂停了的情况。
+    // 把是否在播放的判断条件改为计数。
+    // 防止网络不好长时间Loading，出现播了一点，判断为已播放，其实暂停了的情况。
     let playing = 0
-    let play_count_limit = 60
+    // 现在是折中的方法，只判断3次，防止Loading造成的暂停。
+    // 但是1.5秒内用户点击暂停后，会继续播放。
+    let play_count_limit = 3
     let fullscreen = false
+
+    // TODO 判断用户点击，比如用户主动点击暂停，则中断所有自动操作。
+    // let video_wrap
+    // let listener_created = false
+    // let stop_automatic = function() {
+    //     console.log('=== stop automatic')
+    //     clearInterval(main)
+    //     video_wrap[0].removeEventListener('click', stop_automatic)
+    // }
+    // if (!listener_created) {
+    //     video_wrap = document.getElementsByClassName('video-state-pause')
+    //     if (video_wrap) {
+    //         video_wrap[0].addEventListener('click', stop_automatic)
+    //         document.body.addEventListener('click', function(e) { console.log(e) })
+    //         listener_created = true
+    //     }
+    // }
+    // 监听按键
+    // document.addEventListener('onkeydown', stop_automatic)
 
     let main = setInterval(function() {
 
@@ -56,8 +78,10 @@
 
         if (playing >= play_count_limit && fullscreen) {
             console.log('=== quit loop')
-            clearInterval(main);
+            clearInterval(main)
+            // video_wrap.removeEventListener('click', stop_automatic)
         }
+
     }, 500);
 
 })();
