@@ -37,9 +37,11 @@
 
     // single click to stop scroll
     document.body.addEventListener('click', function() {
-        scrolling = false
-        console.log('Stop scroll')
-        clearInterval(auto_scroll)
+        if (scrolling) {
+            scrolling = false
+            console.log('Stop scroll')
+            clearInterval(auto_scroll)
+        }
     })
 
     // toogle scrolling by hotkey
