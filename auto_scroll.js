@@ -2,7 +2,7 @@
 // @name         Auto Scroll
 // @description  Auto Scroll Pages (double click / ctrl+arrow)
 // @include      *
-// @version      0.11
+// @version      0.12
 // @author       Erimus
 // @grant        none
 // @namespace    https://greasyfork.org/users/46393
@@ -37,6 +37,7 @@
 
     // single click to stop scroll
     document.body.addEventListener('click', function() {
+        scrolling = false
         console.log('Stop scroll')
         clearInterval(auto_scroll)
     })
