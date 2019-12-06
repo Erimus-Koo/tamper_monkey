@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Auto Scroll
+// @name         Auto Scroll 自动滚屏
 // @description  Auto Scroll Pages (double click / ctrl+arrow)
 // @include      *
-// @version      0.12
+// @version      0.13
 // @author       Erimus
 // @grant        none
 // @namespace    https://greasyfork.org/users/46393
@@ -33,6 +33,8 @@
     }
 
     // toogle scrolling by double click
+    // if you don't like double click, add '//' before next line.
+    // 如果你不喜欢双击触发，在下一行前加上 '//' 使其失效。
     document.body.addEventListener('dblclick', toggle_scroll)
 
     // single click to stop scroll
@@ -45,6 +47,8 @@
     })
 
     // toogle scrolling by hotkey
+    // if you want set your own hotkey, find the key code on following site.
+    // 如果你想要设置其它快捷键，查看以下网址以找到对应的按键码。
     // https://www.w3.org/2002/09/tests/keys.html
     document.onkeydown = function(e) {
         let keyCode = e.keyCode || e.which || e.charCode
