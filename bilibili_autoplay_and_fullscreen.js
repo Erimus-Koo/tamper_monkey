@@ -82,6 +82,6 @@
             // video_wrap.removeEventListener('click', stop_automatic)
         }
 
-    }, 500);
+    }, 200);
 
 })();
