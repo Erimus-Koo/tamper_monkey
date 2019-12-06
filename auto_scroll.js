@@ -2,7 +2,7 @@
 // @name         Auto Scroll 自动滚屏
 // @description  Auto Scroll Pages (double click / ctrl+arrow)
 // @include      *
-// @version      0.13
+// @version      0.14
 // @author       Erimus
 // @grant        none
 // @namespace    https://greasyfork.org/users/46393
@@ -33,9 +33,9 @@
     }
 
     // toogle scrolling by double click
-    // if you don't like double click, add '//' before next line.
-    // 如果你不喜欢双击触发，在下一行前加上 '//' 使其失效。
-    document.body.addEventListener('dblclick', toggle_scroll)
+    // if you want to trigger with double click , remove '//' before 'document'.
+    // 你想用双击触发，删除下一行前的 '//'。
+    // document.body.addEventListener('dblclick', toggle_scroll)
 
     // single click to stop scroll
     document.body.addEventListener('click', function() {
