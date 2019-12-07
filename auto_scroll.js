@@ -2,7 +2,7 @@
 // @name         Auto Scroll 自动滚屏
 // @description  Auto Scroll Pages (double click / ctrl+arrow)
 // @include      *
-// @version      0.14
+// @version      0.15
 // @author       Erimus
 // @grant        none
 // @namespace    https://greasyfork.org/users/46393
@@ -15,7 +15,8 @@
         scroll_distance = 1 // move xx pixel
 
     let scrolling = false, // status
-        auto_scroll // scroll function
+        auto_scroll, // scroll function
+        last_click = Date.now()
 
     // main function
     let toggle_scroll = function(dire) {
@@ -32,10 +33,23 @@
         }
     }
 
+    // double click near edge can trigger (Prevent accidental touch)
+    // 双击靠近边缘的位置可以触发滚屏 (防止误触发)
+    let dblclick_check = function(e) {
+        if (Date.now() - last_click < 500) { return } //just stopped by click
+        let range = 40 // effective range
+        let w = window.innerWidth
+        let h = window.innerHeight
+        console.log('double click: x' + e.x + '/' + w + '| y' + e.y + '/' + h)
+        if (e.x < range || w - e.x < range || e.y < range || h - e.y < range) {
+            toggle_scroll()
+        }
+    }
+
     // toogle scrolling by double click
     // if you want to trigger with double click , remove '//' before 'document'.
     // 你想用双击触发，删除下一行前的 '//'。
-    // document.body.addEventListener('dblclick', toggle_scroll)
+    document.body.addEventListener('dblclick', dblclick_check)
 
     // single click to stop scroll
     document.body.addEventListener('click', function() {
@@ -43,6 +57,7 @@
             scrolling = false
             console.log('Stop scroll')
             clearInterval(auto_scroll)
+            last_click = Date.now()
         }
     })
 
