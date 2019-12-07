@@ -3,7 +3,7 @@
 // @version      0.1
 // @description  仅在Bilibili用户主页的投稿页有效，把视频全部加入稍后再看，并且播放。
 // @author       Erimus
-// @include      http*://space.bilibili.com/*/video*
+// @include      http*://space.bilibili.com/*
 // @grant        none
 // @namespace    https://greasyfork.org/users/46393
 // ==/UserScript==
@@ -15,13 +15,18 @@
     let wl_btns = []
 
     let find_wl_btns = setInterval(function() {
-        // 搜索页面上的稍后播放按钮
-        // 这里会重复添加，列表模式/缩略图模式各有一份，随它去。
-        wl_btns = document.getElementsByClassName('i-watchlater')
-        if (wl_btns) {
-            console.log('=== Watch Later Button Found:', wl_btns)
-            clearInterval(find_wl_btns)
-            add_play_all_btn()
+        let current_url = document.URL
+        // 如果在顶部判断网址，从用户主页切过来时不会响应。所以在这边判断。
+        if (current_url.includes('/video')) {
+            console.log('=== in video page')
+            // 搜索页面上的稍后播放按钮
+            // 这里会重复添加，列表模式/缩略图模式各有一份，随它去。
+            wl_btns = document.getElementsByClassName('i-watchlater')
+            if (wl_btns) {
+                console.log('=== Watch Later Button Found:', wl_btns)
+                clearInterval(find_wl_btns)
+                add_play_all_btn()
+            }
         }
     }, 500)
 
