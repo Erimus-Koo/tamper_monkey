@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         B站 自动播放 & 网页全屏
-// @version      0.14
+// @version      0.15
 // @description  Bilibili Autoplay & FullScreen
 // @author       Erimus
 // @include      http*://*bilibili.com/video/*
@@ -44,34 +44,34 @@
 
         if (!fullscreen) {
             // find full screen button
-            let fullScreenBtn = document.getElementsByClassName('bilibili-player-video-web-fullscreen')
+            let fullScreenBtn = document.querySelector('.bilibili-player-video-web-fullscreen')
             console.log('=== Full Screen Button:', fullScreenBtn)
             if (fullScreenBtn) {
                 // check fullscreen status
-                let closed = fullScreenBtn[0].className.includes('closed')
+                let closed = fullScreenBtn.className.includes('closed')
                 console.log('=== Closed:', closed)
                 if (closed) {
                     console.log('=== fullscreen OK')
                     fullscreen = true
                 } else {
-                    fullScreenBtn[0].click()
+                    fullScreenBtn.click()
                 }
             }
         }
 
         if (playing < play_count_limit) {
             // find start button on player area bottom
-            let playBtn = document.getElementsByClassName('bilibili-player-video-btn-start');
+            let playBtn = document.querySelector('.bilibili-player-video-btn-start');
             console.log('=== Play Button:', playBtn)
             if (playBtn) {
                 // check play status
-                let check = playBtn[0].className.includes('video-state-pause')
+                let check = playBtn.className.includes('video-state-pause')
                 console.log('=== Playing check:', check)
                 if (!check) {
                     playing++
                     console.log('=== playing', playing)
                 } else {
-                    playBtn[0].click()
+                    playBtn.click()
                 }
             }
         }

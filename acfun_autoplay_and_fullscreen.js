@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         A站 自动播放 & 网页全屏
-// @version      0.1
+// @version      0.11
 // @description  AcFun Autoplay & FullScreen
 // @author       Erimus
 // @include      http*://*acfun.cn/v/ac*
@@ -25,35 +25,35 @@
 
         if (!fullscreen) {
             // find full screen button
-            let fullScreenBtn = document.getElementsByClassName('fullscreen-web')
+            let fullScreenBtn = document.querySelector('.fullscreen-web')
             console.log('=== Full Screen Button:', fullScreenBtn)
             if (fullScreenBtn) {
                 // check fullscreen status
-                let closed = fullScreenBtn[0].getElementsByClassName('btn-span')[0].getAttribute('data-bind-attr')
+                let closed = fullScreenBtn.querySelector('.btn-span').getAttribute('data-bind-attr')
                 console.log('=== Closed:', closed)
                 // alert(1)
                 if (closed=='web') {
                     console.log('=== fullscreen OK')
                     fullscreen = true
                 } else {
-                    fullScreenBtn[0].click()
+                    fullScreenBtn.click()
                 }
             }
         }
 
         if (playing < play_count_limit) {
             // find start button on player area bottom
-            let playBtn = document.getElementsByClassName('btn-play');
+            let playBtn = document.querySelector('.btn-play');
             console.log('=== Play Button:', playBtn)
             if (playBtn) {
                 // check play status
-                let check = playBtn[0].getElementsByClassName('btn-span')[0].getAttribute('data-bind-attr')
+                let check = playBtn.querySelector('.btn-span').getAttribute('data-bind-attr')
                 console.log('=== Playing check:', check)
                 if (check=='play') {
                     playing++
                     console.log('=== playing', playing)
                 } else {
-                    playBtn[0].click()
+                    playBtn.click()
                 }
             }
         }
@@ -61,7 +61,6 @@
         if (playing >= play_count_limit && fullscreen) {
             console.log('=== quit loop')
             clearInterval(main)
-            // video_wrap.removeEventListener('click', stop_automatic)
         }
 
     }, 200);
