@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Auto Scroll 自动滚屏
-// @description  Auto Scroll Pages (double click / ctrl+arrow)
+// @description  Auto Scroll Pages (double click / ctrl+arrow / alt+arrow)
 // @include      *
-// @version      0.15
+// @version      0.16
 // @author       Erimus
 // @grant        none
 // @namespace    https://greasyfork.org/users/46393
@@ -66,13 +66,13 @@
     // 如果你想要设置其它快捷键，查看以下网址以找到对应的按键码。
     // https://www.w3.org/2002/09/tests/keys.html
     document.onkeydown = function(e) {
-        let keyCode = e.keyCode || e.which || e.charCode
-        let ctrlKey = e.ctrlKey || e.metaKey
-        if (ctrlKey && keyCode == 40) {
-            console.log('Press Ctrl + Down arrow')
+        let keyCode = e.keyCode || e.which || e.charCode,
+            fnKey = e.ctrlKey || e.metaKey || e.altKey
+        if (fnKey && keyCode == 40) {
+            console.log('Press Ctrl/Alt + Down arrow')
             toggle_scroll()
-        } else if (ctrlKey && keyCode == 38) {
-            console.log('Press Ctrl + Up arrow')
+        } else if (fnKey && keyCode == 38) {
+            console.log('Press Ctrl/Alt + Up arrow')
             toggle_scroll('up')
         }
     }
