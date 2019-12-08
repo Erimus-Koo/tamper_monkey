@@ -1,9 +1,10 @@
 // ==UserScript==
-// @name         B站 播放全部（全部加入稍后看并播放）
-// @version      0.1
-// @description  仅在Bilibili用户主页的投稿页有效，把视频全部加入稍后再看，并且播放。
+// @name         B站 播放全部（稍后看增强）
+// @version      0.12
+// @description  在B站用户视频页可一键加入稍后看。在稍后看页面可一键清空。
 // @author       Erimus
 // @include      http*://space.bilibili.com/*
+// @include      http*://*.bilibili.com/watchlater/*
 // @grant        none
 // @namespace    https://greasyfork.org/users/46393
 // ==/UserScript==
@@ -15,9 +16,8 @@
     let wl_btns = []
 
     let find_wl_btns = setInterval(function() {
-        let current_url = document.URL
         // 如果在顶部判断网址，从用户主页切过来时不会响应。所以在这边判断。
-        if (current_url.includes('/video')) {
+        if (document.URL.includes('/video')) {
             console.log('=== in video page')
             // 搜索页面上的稍后播放按钮
             // 这里会重复添加，列表模式/缩略图模式各有一份，随它去。
@@ -27,33 +27,76 @@
                 clearInterval(find_wl_btns)
                 add_play_all_btn()
             }
+        } else if (document.URL.includes('/watchlater/')) {
+            console.log('=== in watch later')
+            wl_btns = document.getElementsByClassName('bilibili-player-watchlater-info-remove')
+            if (wl_btns) {
+                console.log('=== Remove Watch Later Button Found:', wl_btns)
+                clearInterval(find_wl_btns)
+                add_remove_all_btn()
+            }
         }
     }, 500)
 
     let add_play_all_btn = function() {
         // 添加在分类后面
-        let header = document.getElementById('submit-video-type-filter')
-        // 创建按钮
-        let btn = document.createElement('a')
-        btn.innerHTML = '播放本页全部视频'
-        btn.setAttribute('style', 'color:#00a1d6;')
-        btn.setAttribute('id', 'play_all')
-        // 延迟添加按钮，不然会出现在第二位。
-        setTimeout(function() {
-            header.appendChild(btn)
-            document.getElementById('play_all').addEventListener('click', play_all)
+        let find_header = setInterval(function() {
+            let header = document.getElementById('submit-video-type-filter')
+            if (header) {
+                console.log('=== Header Found:', header)
+                clearInterval(find_header)
+                // 创建按钮
+                let btn = document.createElement('a')
+                btn.innerHTML = '播放本页全部视频'
+                btn.setAttribute('style', 'color:#00a1d6;')
+                btn.setAttribute('id', 'play_all')
+                // 延迟添加按钮，不然会出现在第二位。
+                setTimeout(function() {
+                    header.appendChild(btn)
+                    document.getElementById('play_all').addEventListener('click', play_all)
+                }, 500)
+            }
         }, 500)
-
     }
 
     var play_all = function() {
         console.log('=== Play All')
         // 点击所有稍后再看的按钮
         for (let i = 0; i < wl_btns.length; i++) {
-            wl_btns[i].click()
+            if (!wl_btns[i].className.includes('has-select')) { // 排除已选
+                wl_btns[i].click()
+            }
         }
         // 打开稍后再看页面
         window.open('https://www.bilibili.com/watchlater/')
+    }
+
+    let add_remove_all_btn = function() {
+        console.log('in remove all ===')
+        // 页面加载较慢，先要确定找到目标区域。
+        let find_header = setInterval(function() {
+            let header = document.getElementsByClassName('bilibili-player-watchlater-nav-header')[0].getElementsByClassName('bilibili-player-fl')[0]
+            if (header) {
+                console.log('=== Header Found:', header)
+                clearInterval(find_header)
+                // 创建按钮
+                let btn = document.createElement('a')
+                btn.innerHTML = '清空全部'
+                btn.setAttribute('style', 'color:#00a1d6;cursor:pointer;')
+                btn.setAttribute('id', 'remove_all')
+                header.appendChild(btn)
+                document.getElementById('remove_all').addEventListener('click', remove_all)
+            }
+        }, 500)
+    }
+
+    var remove_all = function() {
+        console.log('=== Remove All')
+        // 点击所有删除按钮
+        for (let i = 0; i < wl_btns.length; i++) {
+            wl_btns[i].click()
+        }
+        window.close()
     }
 
 })();
