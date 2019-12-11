@@ -2,7 +2,7 @@
 // @name         Auto Scroll 自动滚屏
 // @description  Auto Scroll Pages (double click / ctrl+arrow / alt+arrow)
 // @include      *
-// @version      0.16
+// @version      0.17
 // @author       Erimus
 // @grant        none
 // @namespace    https://greasyfork.org/users/46393
@@ -37,11 +37,12 @@
     // 双击靠近边缘的位置可以触发滚屏 (防止误触发)
     let dblclick_check = function(e) {
         if (Date.now() - last_click < 500) { return } //just stopped by click
-        let range = 40 // effective range
+        let range = 50 // effective range
         let w = window.innerWidth
         let h = window.innerHeight
         console.log('double click: x' + e.x + '/' + w + '| y' + e.y + '/' + h)
-        if (e.x < range || w - e.x < range || e.y < range || h - e.y < range) {
+        // Except top edge, because of search bar is mostly at top.
+        if (e.x < range || w - e.x < range || h - e.y < range) {
             toggle_scroll()
         }
     }
