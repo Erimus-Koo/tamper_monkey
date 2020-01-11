@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         B站 播放全部（稍后看增强）
-// @version      0.13
+// @version      0.14
 // @description  在B站用户视频页可一键加入稍后看。在稍后看页面可一键清空。
 // @author       Erimus
 // @include      http*://space.bilibili.com/*
@@ -29,7 +29,7 @@
             }
         } else if (document.URL.includes('/watchlater/')) {
             console.log('=== in watch later')
-            wl_btns = document.querySelectorAll('.bilibili-player-watchlater-info-remove')
+            wl_btns = document.querySelectorAll('.player-auxiliary-playlist-item-delete') //找到列表中的删除按钮
             if (wl_btns.length > 0) {
                 console.log('=== Remove Watch Later Button Found:', wl_btns)
                 clearInterval(find_wl_btns)
@@ -75,14 +75,14 @@
         console.log('in remove all ===')
         // 页面加载较慢，先要确定找到目标区域。
         let find_header = setInterval(function() {
-            let header = document.querySelector('.bilibili-player-watchlater-nav-header .bilibili-player-fl')
+            let header = document.querySelector('.player-auxiliary-filter-playlist .player-auxiliary-filter-title')
             if (header) {
                 console.log('=== Header Found:', header)
                 clearInterval(find_header)
                 // 创建按钮
                 let btn = document.createElement('a')
-                btn.innerHTML = '清空全部'
-                btn.setAttribute('style', 'color:#00a1d6;cursor:pointer;')
+                btn.innerHTML = ' 清空全部'
+                btn.setAttribute('style', 'color:#00a1d6;cursor:pointer;zoom:.75')
                 btn.setAttribute('id', 'remove_all')
                 header.appendChild(btn)
                 document.querySelector('#remove_all').addEventListener('click', remove_all)
