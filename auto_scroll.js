@@ -11,7 +11,7 @@
 (function(document) {
 
     // speed controlled by the following 2 variables
-    let scroll_interval = 15, // every xx ms
+    let scroll_interval = 30, // every xx ms
         scroll_distance = 1 // move xx pixel
 
     let scrolling = false, // status
