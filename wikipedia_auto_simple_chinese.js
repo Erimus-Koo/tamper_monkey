@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         维基百科优先简体中文（或繁体）
-// @version      0.14
+// @version      0.15
 // @description  Wikipedia 维基百科中文优先选择地区 简/繁 中文。
 // @author       Erimus
 // @include      http*://zh.wikipedia.org/*
@@ -42,7 +42,7 @@
             if (current_lang) {
                 clearInterval(find_current_lang)
                 // 简体默认为【简体】，而不是【大陆简体】。所以判断includes。
-                if (target_lang_name.includes(current_lang)) {
+                if (target_lang_name == current_lang) {
                     console.log('当前语言:', current_lang, '无需变更')
                 } else {
                     switch_to_target_lang()
