@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         B站 双击全屏
-// @version      0.1
+// @version      0.2
 // @description  因为B站现存好几种播放器，如果有某些页面无效，请反馈给我具体页面。
 // @author       Erimus
 // @include      http*.bilibili.com/video/*
@@ -17,9 +17,8 @@
 
     const elementDict = {
             'video': { // 普通视频 H5播放器
-                'click_area': '.bilibili-player-video video', //双击生效区
-                'fs_btn': '.bilibili-player-video-btn-fullscreen', //全屏按钮
-                'play_btn': '.bilibili-player-video-btn-start' //播放按钮
+                'click_area': '.bilibili-player-video-wrap', //双击生效区
+                'fs_btn': '.bilibili-player-video-btn-fullscreen' //全屏按钮
             }
         }
     let thisPlayer // 当前播放器
@@ -34,32 +33,18 @@
             thisPlayer = 'video'
 
             let click_area = document.querySelector(elementDict[thisPlayer]['click_area']),
-                fs_btn = document.querySelector(elementDict[thisPlayer]['fs_btn']),
-                play_btn = document.querySelector(elementDict[thisPlayer]['play_btn'])
+                fs_btn = document.querySelector(elementDict[thisPlayer]['fs_btn'])
             console.debug(SN, 'click_area:', click_area)
             console.debug(SN, 'fs_btn:', fs_btn)
-            console.debug(SN, 'play_btn:', play_btn)
-            if (click_area && fs_btn && play_btn) {
+
+            if (click_area && fs_btn) {
                 console.log(SN, 'All buttons found!')
                 clearInterval(find_btns_and_add_listener)
 
-                // 区分单击和双击，避免双击当中触发短暂的两次单击。
                 click_area.addEventListener('dblclick', dblclick)
-                click_area.addEventListener('click', click)
-
-                let wait_for_second
-
-                function click(e) {
-                    e.stopPropagation()
-                    clearTimeout(wait_for_second)
-                    wait_for_second = setTimeout(function() {
-                        console.log(SN, '单击', play_btn)
-                        play_btn.click() // 250毫秒之后 确定继续传递单击行为
-                    }, 250)
-                }
 
                 function dblclick(e) {
-                    clearTimeout(wait_for_second)
+                    e.stopPropagation()
                     console.log(SN, '双击', fs_btn)
                     fs_btn.click() // toggle full screen
                 }
