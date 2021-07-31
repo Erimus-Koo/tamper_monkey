@@ -36,7 +36,6 @@
         // 但是这一小段时间内，用户点击暂停后，会继续自动播放。
         let play_count_limit = 3
         let fullscreen = false
-        let continued = false
 
         let main = setInterval(function() {
 
@@ -70,22 +69,6 @@
                         console.log(SN, 'Playing:', playing)
                     } else {
                         playBtn.click()
-                    }
-                }
-            }
-
-            // 继续播放
-            if (!continued) {
-                // find full screen button
-                let continuedBtn = document.querySelector('.bilibili-player-video-toast-item-jump')
-                console.debug(SN, 'Continue Play Button:', continuedBtn)
-                if (continuedBtn) {
-                    // 不跳转到其它话(上次看到 xx章节) 只在当前视频中跳转进度
-                    // 有时候没看片尾 会记录上一集的片尾位置之类的
-                    let continuedText = document.querySelector('.bilibili-player-video-toast-item-text').innerHTML
-                    console.debug(SN, 'Continue Text:', continuedText)
-                    if (continuedText.indexOf(' ') == -1) {
-                        continuedBtn.click()
                     }
                 }
             }
