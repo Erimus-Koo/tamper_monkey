@@ -2,7 +2,7 @@
 // @name         Auto Scroll 自动滚屏
 // @description  Auto Scroll Pages (double click / ctrl+arrow / alt+arrow)
 // @include      *
-// @version      0.17
+// @version      0.18
 // @author       Erimus
 // @grant        none
 // @namespace    https://greasyfork.org/users/46393
@@ -11,7 +11,7 @@
 (function(document) {
 
     // speed controlled by the following 2 variables
-    let scroll_interval = 30, // every xx ms
+    let scroll_interval = 50, // every xx ms
         scroll_distance = 1 // move xx pixel
 
     let scrolling = false, // status
@@ -34,7 +34,7 @@
     }
 
     // double click near edge can trigger (Prevent accidental touch)
-    // 双击靠近边缘的位置可以触发滚屏 (防止误触发)
+    // 双击靠近页面边缘的位置可以触发滚屏 (防止误触发)
     let dblclick_check = function(e) {
         if (Date.now() - last_click < 500) { return } //just stopped by click
         let range = 50 // effective range
@@ -49,7 +49,7 @@
 
     // toogle scrolling by double click
     // if you want to trigger with double click , remove '//' before 'document'.
-    // 你想用双击触发，删除下一行前的 '//'。
+    // 双击触发
     document.body.addEventListener('dblclick', dblclick_check)
 
     // single click to stop scroll
