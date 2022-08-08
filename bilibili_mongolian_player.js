@@ -1,10 +1,11 @@
 // ==UserScript==
-// @name         B站上单播放器
-// @version      0.1.1
-// @description  B站播放器优化。添加了一些 youtube 和 potplayer 的快捷键。修复了多P连播，播放位置记忆等功能。
+// @name         B站上单播放器 Mongolian Player
+// @version      0.1.3
+// @description  B站播放器优化。添加了一些 youtube 和 potplayer 的快捷键。修复了多P连播，增加了自动播放记忆位置等功能。
 // @author       Erimus
 // @include      http*.bilibili.com/video/*
-// @include      http*.bilibili.com/bangumi/*
+// @include      http*.bilibili.com/bangumi/play/*
+// @include      http*.bilibili.com/medialist/play/*
 // @namespace    https://greasyfork.org/users/46393
 // ==/UserScript==
 
@@ -12,6 +13,7 @@
 ====================
 快捷键
 
+a: 全屏（f 优先给 vim 用）
 w: 网页全屏
 t: 宽屏
 i: 画中画
@@ -21,7 +23,7 @@ d: 弹幕开关
 m: 静音
 
 c: 播放加速 每次10%
-x: 播放减速 每次10%
+v: 播放减速 每次10%（x 优先给 vim 用）
 z: 播放恢复原速
 
 0 ~ 9: 切换到相应的百分比进度（如按2等于跳到20%进度）
@@ -53,19 +55,64 @@ f: 全屏
     const SN = '[B站上单播放器]' // script name
     console.log(SN, '油猴脚本开始')
 
-    let videoObj
+    // 监听页面跳转事件
+    let _wr = (type) => {
+        let orig = history[type]
+        return () => {
+            let rv = orig.apply(this, arguments),
+                e = new Event(type)
+            e.arguments = arguments
+            window.dispatchEvent(e)
+            return rv
+        }
+    }
+    history.pushState = _wr('pushState')
+    // history.replaceState = _wr('replaceState')
+
+    let videoObj // 播放器元素
 
     // 缩写
     let find = (selector) => { return document.querySelector(selector) }
-    let find_n_click = (selector) => { find(selector).click() }
+    let find_n_click = (selector) => {
+        console.log(SN, 'cmd:', `document.querySelector('${selector}').click()`)
+        document.querySelector(selector).click()
+    }
 
-    // 按键快捷键
+    // 按键选择器
+    let eleDict = {
+        'fullscreen': '.bpx-player-ctrl-full', //全屏
+        'webFullscreen': '.bpx-player-ctrl-web', //网页全屏
+        'theaterMode': '.bpx-player-ctrl-wide', //宽屏
+        'miniPlayer': '.bpx-player-ctrl-pip', //画中画
+        'mute': '.bpx-player-ctrl-volume-icon', //静音
+        'danmaku': '.bpx-player-dm-switch', //弹幕开关
+        'playPrev': '.bpx-player-ctrl-prev', //播放上一P
+        'playNext': '.bpx-player-ctrl-next', //播放下一P
+        'playerWrapper': '.bpx-player-video-wrap', //播放器可双击区域
+        'collect': '.collect', //收藏
+    }
+
+    // 番剧模式下 播放器元素名称不同
+    if (document.URL.indexOf('bangumi/play') != -1) {
+        eleDict.fullscreen = '.squirtle-video-fullscreen' //全屏
+        eleDict.webFullscreen = '.squirtle-pagefullscreen-inactive' //网页全屏
+        eleDict.theaterMode = '.squirtle-video-widescreen' //宽屏
+        eleDict.miniPlayer = '.squirtle-video-pip' //画中画
+        eleDict.mute = '.squirtle-volume-mute' //静音
+        eleDict.danmaku = '.bpx-player-dm-switch input' //弹幕开关
+        eleDict.playNext = '.squirtle-video-next' //播放下一P
+        eleDict.playerWrapper = '.bpx-player-video-wrap' //播放器可双击区域
+    }
+
+    // 快捷键对应按键
     const shortcutDict = {
-        'w': '.bilibili-player-video-web-fullscreen', //网页全屏
-        't': '.bilibili-player-video-btn-widescreen', //宽屏
-        'm': '.bilibili-player-iconfont-volume', //静音
-        'i': '.bilibili-player-video-btn-pip', //画中画
-        'd': '.bilibili-player-video-danmaku-switch>input', //弹幕开关
+        'a': eleDict.fullscreen, //全屏
+        'w': eleDict.webFullscreen, //网页全屏
+        't': eleDict.theaterMode, //宽屏
+        'i': eleDict.miniPlayer, //画中画
+        'm': eleDict.mute, //静音
+        'd': eleDict.danmaku, //弹幕开关
+        's': eleDict.collect, //收藏
     }
 
     let pressKeyborder = function(e) {
@@ -73,11 +120,13 @@ f: 全屏
             console.debug(SN, 'e:', e)
             if (e.key in shortcutDict) {
                 find_n_click(shortcutDict[e.key])
+            } else if (e.shiftKey && e.key == 'ArrowLeft') { //shift+l 上一P
+                find_n_click(eleDict.playPrev)
             } else if (e.shiftKey && e.key == 'ArrowRight') { //shift+r 下一P
-                find_n_click('.bilibili-player-iconfont-next')
+                find_n_click(eleDict.playNext)
             } else if (e.key === 'c') { //加速
                 videoObj.playbackRate += 0.1
-            } else if (e.key === 'x') { //减速
+            } else if (e.key === 'v') { //减速
                 videoObj.playbackRate -= 0.1
             } else if (e.key === 'z') { //重置速度
                 videoObj.playbackRate = 1
@@ -88,10 +137,11 @@ f: 全屏
     }
 
     let init = function() {
+        // 寻找视频播放器 添加功能
         let wait_for_video_player_init = setInterval(() => {
             console.debug(SN, 'Init:', document.URL)
 
-            let click_area = find('.bilibili-player-video-wrap')
+            let click_area = find(eleDict.playerWrapper)
             videoObj = find('video:first-child')
             console.debug(SN, 'click_area:', click_area)
             console.debug(SN, 'videoObj:', videoObj)
@@ -104,25 +154,27 @@ f: 全屏
                 click_area.addEventListener('dblclick', function(e) {
                     e.stopPropagation()
                     console.log(SN, '双击切换全屏')
-                    find_n_click('.bilibili-player-video-btn-fullscreen')
+                    find_n_click(eleDict.fullscreen)
                 })
             }
         }, 500)
 
+        // 添加快捷键监听
+        document.addEventListener('keydown', pressKeyborder);
+
         // 有些元素需要延迟载入 所以让它找一会儿
         let addAutoPlayNext = false //自动分P 是否含有多P
         let jumpToSavedTime = false //进度记录 是否存有进度
-        let isFullScreen = false //自动网页全屏 当前是否全屏
 
         let find_more = setInterval(() => {
             // 自动切P （自动播放关闭，当视频播放结束时自动按下一段按钮。）
             // B站自动切P现在会自动播放推荐视频，此处应有蒙古上单名言。
             if (!addAutoPlayNext) {
-                let nextBtn = find('.bilibili-player-iconfont-next')
+                let nextBtn = find(eleDict.playNext)
                 if (nextBtn) {
                     setInterval(() => {
                         if (videoObj.duration - videoObj.currentTime <= 0) {
-                            nextBtn.click()
+                            // nextBtn.click()
                         }
                     }, 1000)
                     addAutoPlayNext = true
@@ -144,28 +196,33 @@ f: 全屏
                     }
                 }
             }
-
-            // 自动网页全屏 开始
-            if (!isFullScreen) {
-                let fsBtn = find('.bilibili-player-video-web-fullscreen')
-                console.debug(SN, 'fullscreenBtn:', fsBtn)
-                // check fullscreen status
-                if (fsBtn.className.includes('closed')) {
-                    console.log(SN, 'fullscreen OK')
-                    isFullScreen = true
-                } else {
-                    fsBtn.click()
-                }
-            }
-            // 自动网页全屏 结束（不需要的删掉这段）
-
         }, 200)
 
         // 无论是否找到 10秒后都停止搜寻
         setTimeout(() => { clearInterval(find_more) }, 10000)
 
-        // 添加快捷键监听
-        document.addEventListener('keydown', pressKeyborder);
+        // 持续尝试 直到成功
+        let isFullScreen = false //自动网页全屏 当前是否全屏
+        let try_until_success = setInterval(() => {
+
+            // 自动网页全屏 开始
+            if (!isFullScreen) {
+                // check fullscreen status
+                if (find(eleDict.playerWrapper).clientWidth ==
+                    document.body.clientWidth) {
+                    console.log(SN, 'fullscreen OK')
+                    isFullScreen = true
+                } else {
+                    find_n_click(eleDict.webFullscreen)
+                }
+            }
+            // 自动网页全屏 结束（不需要的删掉这段）
+
+            if (isFullScreen) {
+                clearInterval(try_until_success)
+            }
+        }, 500)
+
     }
     init()
 
