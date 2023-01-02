@@ -3,9 +3,9 @@
 // @version      0.1.3
 // @description  B站播放器优化。添加了一些 youtube 和 potplayer 的快捷键。修复了多P连播，增加了自动播放记忆位置等功能。
 // @author       Erimus
-// @include      http*.bilibili.com/video/*
-// @include      http*.bilibili.com/bangumi/play/*
-// @include      http*.bilibili.com/medialist/play/*
+// @match        *://*.bilibili.com/video/*
+// @match        *://*.bilibili.com/bangumi/play/*
+// @match        *://*.bilibili.com/medialist/play/*
 // @namespace    https://greasyfork.org/users/46393
 // ==/UserScript==
 
@@ -66,7 +66,7 @@ f: 全屏
             return rv
         }
     }
-    history.pushState = _wr('pushState')
+    // history.pushState = _wr('pushState')
     // history.replaceState = _wr('replaceState')
 
     let videoObj // 播放器元素
@@ -102,6 +102,19 @@ f: 全屏
         eleDict.danmaku = '.bpx-player-dm-switch input' //弹幕开关
         eleDict.playNext = '.squirtle-video-next' //播放下一P
         eleDict.playerWrapper = '.bpx-player-video-wrap' //播放器可双击区域
+    }
+
+
+    // 稍后播模式下 播放器元素名称不同
+    if (document.URL.indexOf('medialist/play') != -1) {
+        eleDict.fullscreen = '.bilibili-player-video-btn-fullscreen' //全屏
+        eleDict.webFullscreen = '.bilibili-player-video-web-fullscreen' //网页全屏
+        eleDict.theaterMode = '.bilibili-player-video-btn-widescreen' //宽屏
+        eleDict.miniPlayer = '.bilibili-player-video-btn-pip' //画中画
+        eleDict.mute = '.squirtle-volume-mute' //静音
+        eleDict.danmaku = '.bilibili-player-video-danmaku-switch' //弹幕开关
+        eleDict.playNext = '.bilibili-player-video-btn-next' //播放下一P
+        eleDict.playerWrapper = '.bilibili-player-dm-tip-wrap' //播放器可双击区域
     }
 
     // 快捷键对应按键
@@ -174,7 +187,7 @@ f: 全屏
                 if (nextBtn) {
                     setInterval(() => {
                         if (videoObj.duration - videoObj.currentTime <= 0) {
-                            // nextBtn.click()
+                            nextBtn.click()
                         }
                     }, 1000)
                     addAutoPlayNext = true
