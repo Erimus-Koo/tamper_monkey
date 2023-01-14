@@ -6,6 +6,7 @@
 // @match        *://*.bilibili.com/video/*
 // @match        *://*.bilibili.com/bangumi/play/*
 // @match        *://*.bilibili.com/medialist/play/*
+// @match        *://*.bilibili.com/list/*
 // @namespace    https://greasyfork.org/users/46393
 // ==/UserScript==
 
