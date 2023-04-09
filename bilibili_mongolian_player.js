@@ -86,7 +86,7 @@ f: 全屏
         'theaterMode': '.bpx-player-ctrl-wide', //宽屏
         'miniPlayer': '.bpx-player-ctrl-pip', //画中画
         'mute': '.bpx-player-ctrl-volume-icon', //静音
-        'danmaku': '.bpx-player-dm-switch', //弹幕开关
+        'danmaku': '.bui-danmaku-switch-input', //弹幕开关
         'playPrev': '.bpx-player-ctrl-prev', //播放上一P
         'playNext': '.bpx-player-ctrl-next', //播放下一P
         'playerWrapper': '.bpx-player-video-wrap', //播放器可双击区域
@@ -124,7 +124,7 @@ f: 全屏
         'w': eleDict.webFullscreen, //网页全屏
         't': eleDict.theaterMode, //宽屏
         'i': eleDict.miniPlayer, //画中画
-        'm': eleDict.mute, //静音
+        // 'm': eleDict.mute, //静音(播放器自带 加了会变点两次)
         'd': eleDict.danmaku, //弹幕开关
         's': eleDict.collect, //收藏
     }
