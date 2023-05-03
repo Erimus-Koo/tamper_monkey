@@ -53,8 +53,9 @@ f: 全屏
 (function() {
     'use strict';
 
-    const SN = '[B站上单播放器]' // script name
-    console.log(SN, '油猴脚本开始')
+    let log = function(c) { console.log('[B站上单播放器]', c) }
+    let debug = function(c) { console.debug('[B站上单播放器]', c) }
+    log('油猴脚本开始')
 
     // 监听页面跳转事件
     let _wr = (type) => {
@@ -75,7 +76,7 @@ f: 全屏
     // 缩写
     let find = (selector) => { return document.querySelector(selector) }
     let find_n_click = (selector) => {
-        console.log(SN, 'cmd:', `document.querySelector('${selector}').click()`)
+        log('cmd:', `document.querySelector('${selector}').click()`)
         document.querySelector(selector).click()
     }
 
@@ -129,9 +130,22 @@ f: 全屏
         's': eleDict.collect, //收藏
     }
 
+    // 改变并记录速度
+    let changePlaySpeed = function(v) {
+        const LS_playSpeed = 'mongolian_player_playback_speed' // 播放速度的存储名
+        log('ls speed:', localStorage.getItem(LS_playSpeed))
+        let playSpeed = parseFloat(localStorage.getItem(LS_playSpeed)) || 1 // 播放速度
+        //参数绝对值小于1时调速 大于1则理解为重置
+        playSpeed = (Math.abs(v) < 1) ? (playSpeed + v) : 1
+        playSpeed = Number(playSpeed.toFixed(2))
+        log(`playSpeed(${v}): ${playSpeed}`)
+        localStorage.setItem(LS_playSpeed, playSpeed)
+        videoObj.playbackRate = playSpeed
+    }
+
     let pressKeyborder = function(e) {
         if (e && e.key) {
-            console.debug(SN, 'e:', e)
+            debug('e:', e)
             if (e.key in shortcutDict) {
                 find_n_click(shortcutDict[e.key])
             } else if (e.shiftKey && e.key == 'ArrowLeft') { //shift+l 上一P
@@ -139,11 +153,11 @@ f: 全屏
             } else if (e.shiftKey && e.key == 'ArrowRight') { //shift+r 下一P
                 find_n_click(eleDict.playNext)
             } else if (e.key === 'c') { //加速
-                videoObj.playbackRate += 0.1
+                changePlaySpeed(0.1)
             } else if (e.key === 'v') { //减速
-                videoObj.playbackRate -= 0.1
+                changePlaySpeed(-0.1)
             } else if (e.key === 'z') { //重置速度
-                videoObj.playbackRate = 1
+                changePlaySpeed(99)
             } else if ('1234567890'.indexOf(e.key) != -1) { //切进度条
                 videoObj.currentTime = videoObj.duration / 10 * parseInt(e.key)
             }
@@ -153,23 +167,26 @@ f: 全屏
     let init = function() {
         // 寻找视频播放器 添加功能
         let wait_for_video_player_init = setInterval(() => {
-            console.debug(SN, 'Init:', document.URL)
+            debug('Init:', document.URL)
 
             let click_area = find(eleDict.playerWrapper)
             videoObj = find('video:first-child')
-            console.debug(SN, 'click_area:', click_area)
-            console.debug(SN, 'videoObj:', videoObj)
+            debug('click_area:', click_area)
+            debug('videoObj:', videoObj)
 
             if (click_area && videoObj) {
-                console.log(SN, '视频播放器加载完毕!')
+                log('视频播放器加载完毕!')
                 clearInterval(wait_for_video_player_init)
 
                 // 双击切换全屏
                 click_area.addEventListener('dblclick', function(e) {
                     e.stopPropagation()
-                    console.log(SN, '双击切换全屏')
+                    log('双击切换全屏')
                     find_n_click(eleDict.fullscreen)
                 })
+
+                // 载入保存的播放速度
+                changePlaySpeed(0)
             }
         }, 500)
 
@@ -198,13 +215,13 @@ f: 全屏
             // 自动跳到上次播放位置
             if (!jumpToSavedTime) {
                 let continuedBtn = find('.bilibili-player-video-toast-item-jump')
-                console.debug(SN, 'Continue Play Button:', continuedBtn)
+                debug('Continue Play Button:', continuedBtn)
                 if (continuedBtn) {
                     jumpToSavedTime = true
                     // 不跳转到其它话(上次看到 xx章节) 只在当前视频中跳转进度
                     // 有时候没看片尾 会记录上一集的片尾位置之类的
                     let continuedText = find('.bilibili-player-video-toast-item-text').innerHTML
-                    console.debug(SN, 'Continue Text:', continuedText)
+                    debug('Continue Text:', continuedText)
                     if (continuedText.indexOf(' ') == -1) {
                         continuedBtn.click()
                     }
@@ -224,7 +241,7 @@ f: 全屏
                 // check fullscreen status
                 if (find(eleDict.playerWrapper).clientWidth ==
                     document.body.clientWidth) {
-                    console.log(SN, 'fullscreen OK')
+                    log('fullscreen OK')
                     isFullScreen = true
                 } else {
                     find_n_click(eleDict.webFullscreen)
