@@ -76,7 +76,7 @@ f: 全屏
     // 缩写
     let find = (selector) => { return document.querySelector(selector) }
     let find_n_click = (selector) => {
-        log('cmd:', `document.querySelector('${selector}').click()`)
+        log(`cmd: document.querySelector('${selector}').click()`)
         document.querySelector(selector).click()
     }
 
@@ -126,14 +126,14 @@ f: 全屏
         't': eleDict.theaterMode, //宽屏
         'i': eleDict.miniPlayer, //画中画
         // 'm': eleDict.mute, //静音(播放器自带 加了会变点两次)
-        'd': eleDict.danmaku, //弹幕开关
+        // 'd': eleDict.danmaku, //弹幕开关
         's': eleDict.collect, //收藏
     }
 
     // 改变并记录速度
     let changePlaySpeed = function(v) {
         const LS_playSpeed = 'mongolian_player_playback_speed' // 播放速度的存储名
-        log('ls speed:', localStorage.getItem(LS_playSpeed))
+        log(`ls speed: ${localStorage.getItem(LS_playSpeed)}`)
         let playSpeed = parseFloat(localStorage.getItem(LS_playSpeed)) || 1 // 播放速度
         //参数绝对值小于1时调速 大于1则理解为重置
         playSpeed = (Math.abs(v) < 1) ? (playSpeed + v) : 1
