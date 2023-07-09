@@ -131,7 +131,7 @@ f: 全屏
     }
 
     // 改变并记录速度
-    let changePlaySpeed = function(v) {
+    let changePlaySpeed = function(v = 0) {
         const LS_playSpeed = 'mongolian_player_playback_speed' // 播放速度的存储名
         log(`ls speed: ${localStorage.getItem(LS_playSpeed)}`)
         let playSpeed = parseFloat(localStorage.getItem(LS_playSpeed)) || 1 // 播放速度
@@ -254,6 +254,10 @@ f: 全屏
             }
         }, 500)
 
+        // 让调速定期执行
+        // 连播目前检测不到 不会重新执行油猴
+        // 或是开了多个窗口 调整了其中一个的速度 其他窗口速度并不会跟着变
+        setInterval(changePlaySpeed, 5000)
     }
     init()
 
