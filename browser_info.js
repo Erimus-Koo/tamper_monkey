@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Browser Info to <body>
-// @description  Add browser info(platform & etc.) to body, for css selecting.
-// @include      *
+// @name         Browser Info
+// @description  Add browser info(platform & etc.) to html, for css selecting.
+// @match        *://*/*
 // @version      0.1
 // @author       Erimus
 // @grant        none
@@ -29,8 +29,18 @@
     log('chrome_ver:', chrome_ver)
 
     // inject properties into body
-    document.body.setAttribute('ua-os', os)
-    document.body.setAttribute('ua-browser', browser)
-    document.body.setAttribute('ua-chrome-ver', chrome_ver)
+    let html = document.querySelector('html')
+    html.setAttribute('ua-os', os)
+    html.setAttribute('ua-browser', browser)
+    html.setAttribute('ua-chrome-ver', chrome_ver)
 
+    // check for 10 times (some page will rewrite the attribute)
+    // let count = 0
+    // let checker = setInterval(()=>{
+    //     if(!html.getAttribute('ua-os')){
+    //         console.log('not found')
+    //     }
+    //     count ++
+    //     if(count>20){clearInterval(checker)}
+    // },500)
 })(document)
