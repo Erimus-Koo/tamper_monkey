@@ -170,7 +170,7 @@ f: 全屏
             debug('Init:', document.URL)
 
             let click_area = find(eleDict.playerWrapper)
-            videoObj = find('video:first-child')
+            videoObj = find(`${eleDict.playerWrapper} video`)
             debug('click_area:', click_area)
             debug('videoObj:', videoObj)
 
