@@ -53,8 +53,8 @@ f: 全屏
 (function() {
     'use strict';
 
-    let log = function(c) { console.log('[B站上单播放器]', c) }
-    let debug = function(c) { console.debug('[B站上单播放器]', c) }
+    let log = function(...args) { console.log('[B站上单播放器]', ...args) }
+    let debug = function(...args) { console.debug('[B站上单播放器]', ...args) }
     log('油猴脚本开始')
 
     // 监听页面跳转事件
