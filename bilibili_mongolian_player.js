@@ -146,8 +146,11 @@ f: 全屏
     let pressKeyborder = function(e) {
         if (e && e.key) {
             debug('e:', e)
+            // 如果光标在输入框里，快捷键不生效
+            if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') { return }
+            // 设置快捷键
             if (e.key in shortcutDict) {
-                find_n_click(shortcutDict[e.key])
+                find_n_click(shortcutDict[e.key]) //字典里定义的快捷键
             } else if (e.shiftKey && e.key == 'ArrowLeft') { //shift+l 上一P
                 find_n_click(eleDict.playPrev)
             } else if (e.shiftKey && e.key == 'ArrowRight') { //shift+r 下一P
