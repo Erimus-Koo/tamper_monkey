@@ -133,14 +133,27 @@ f: 全屏
     // 改变并记录速度
     let changePlaySpeed = function(v = 0) {
         const LS_playSpeed = 'mongolian_player_playback_speed' // 播放速度的存储名
-        log(`ls speed: ${localStorage.getItem(LS_playSpeed)}`)
+        debug(`ls speed: ${localStorage.getItem(LS_playSpeed)}`)
         let playSpeed = parseFloat(localStorage.getItem(LS_playSpeed)) || 1 // 播放速度
         //参数绝对值小于1时调速 大于1则理解为重置
         playSpeed = (Math.abs(v) < 1) ? (playSpeed + v) : 1
         playSpeed = Number(playSpeed.toFixed(2))
-        log(`playSpeed(${v}): ${playSpeed}`)
+        debug(`playSpeed(${v}): ${playSpeed}`)
         localStorage.setItem(LS_playSpeed, playSpeed)
         videoObj.playbackRate = playSpeed
+    }
+
+    // 记录音量
+    let changeVideoVolume = function(v = 0) {
+        const LS_videoVolume = 'mongolian_player_video_volume' // 播放音量的存储名
+        debug(`ls volume: ${localStorage.getItem(LS_videoVolume)}`)
+        let volume = parseFloat(localStorage.getItem(LS_videoVolume)) || 0.5 // 播放速度
+        volume = Math.min(Math.max(volume + v, 0), 1)
+        volume = Number(volume.toFixed(2))
+        debug(`volume(${v}): ${volume}`)
+        localStorage.setItem(LS_videoVolume, volume)
+        // 因为B站本身已经有了调音功能 所以只记录 不改变音量 不然会改变多次
+        if (v == 0) { videoObj.volume = volume }
     }
 
     let pressKeyborder = function(e) {
@@ -155,6 +168,10 @@ f: 全屏
                 find_n_click(eleDict.playPrev)
             } else if (e.shiftKey && e.key == 'ArrowRight') { //shift+r 下一P
                 find_n_click(eleDict.playNext)
+            } else if (e.key == 'ArrowUp') { //记录音量
+                changeVideoVolume(0.1)
+            } else if (e.key == 'ArrowDown') { //记录音量
+                changeVideoVolume(-0.1)
             } else if (e.key === 'c') { //加速
                 changePlaySpeed(0.1)
             } else if (e.key === 'v') { //减速
@@ -257,10 +274,13 @@ f: 全屏
             }
         }, 500)
 
-        // 让调速定期执行
+        // 定期执行，让播放速度和音量统一为设定值
         // 连播目前检测不到 不会重新执行油猴
         // 或是开了多个窗口 调整了其中一个的速度 其他窗口速度并不会跟着变
-        setInterval(changePlaySpeed, 5000)
+        setInterval(() => {
+            changePlaySpeed()
+            changeVideoVolume()
+        }, 5000)
     }
     init()
 
