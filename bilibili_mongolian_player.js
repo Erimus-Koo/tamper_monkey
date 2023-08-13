@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         B站上单播放器 Mongolian Player
-// @version      0.1.3
+// @version      0.1.5
 // @description  B站播放器优化。添加了一些 youtube 和 potplayer 的快捷键。修复了多P连播，增加了自动播放记忆位置等功能。
 // @author       Erimus
 // @match        *://*.bilibili.com/video/*
@@ -133,12 +133,12 @@ f: 全屏
     // 改变并记录速度
     let changePlaySpeed = function(v = 0) {
         const LS_playSpeed = 'mongolian_player_playback_speed' // 播放速度的存储名
-        debug(`ls speed: ${localStorage.getItem(LS_playSpeed)}`)
+        // debug(`ls speed: ${localStorage.getItem(LS_playSpeed)}`)
         let playSpeed = parseFloat(localStorage.getItem(LS_playSpeed)) || 1 // 播放速度
         //参数绝对值小于1时调速 大于1则理解为重置
         playSpeed = (Math.abs(v) < 1) ? (playSpeed + v) : 1
         playSpeed = Number(playSpeed.toFixed(2))
-        debug(`playSpeed(${v}): ${playSpeed}`)
+        if (v != 0) { debug(`playSpeed(${v}): ${playSpeed}`) }
         localStorage.setItem(LS_playSpeed, playSpeed)
         videoObj.playbackRate = playSpeed
     }
@@ -146,11 +146,11 @@ f: 全屏
     // 记录音量
     let changeVideoVolume = function(v = 0) {
         const LS_videoVolume = 'mongolian_player_video_volume' // 播放音量的存储名
-        debug(`ls volume: ${localStorage.getItem(LS_videoVolume)}`)
+        // debug(`ls volume: ${localStorage.getItem(LS_videoVolume)}`)
         let volume = parseFloat(localStorage.getItem(LS_videoVolume)) || 0.5 // 播放速度
         volume = Math.min(Math.max(volume + v, 0), 1)
         volume = Number(volume.toFixed(2))
-        debug(`volume(${v}): ${volume}`)
+        if (v != 0) { debug(`volume(${v}): ${volume}`) }
         localStorage.setItem(LS_videoVolume, volume)
         // 因为B站本身已经有了调音功能 所以只记录 不改变音量 不然会改变多次
         if (v == 0) { videoObj.volume = volume }
@@ -160,7 +160,9 @@ f: 全屏
         if (e && e.key) {
             debug('e:', e)
             // 如果光标在输入框里，快捷键不生效
-            if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') { return }
+            if (e.target.tagName === 'TEXTAREA' ||
+                (e.target.tagName === 'INPUT' && ["text", "password", "url", "search", "tel", "email"].includes(e.target.type))
+            ) { return }
             // 设置快捷键
             if (e.key in shortcutDict) {
                 find_n_click(shortcutDict[e.key]) //字典里定义的快捷键
@@ -178,9 +180,13 @@ f: 全屏
                 changePlaySpeed(-0.1)
             } else if (e.key === 'z') { //重置速度
                 changePlaySpeed(99)
-            } else if ('1234567890'.indexOf(e.key) != -1) { //切进度条
+            } else if ('1234567890'.indexOf(e.key) != -1) { //进度条跳转
                 videoObj.currentTime = videoObj.duration / 10 * parseInt(e.key)
+            } else {
+                return // 如果没有命中任何快捷键就退出
             }
+            // 如果命中任何快捷键 就阻止传递
+            e.stopPropagation();
         }
     }
 
