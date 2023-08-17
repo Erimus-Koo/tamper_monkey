@@ -71,7 +71,8 @@ f: 全屏
     // history.pushState = _wr('pushState')
     // history.replaceState = _wr('replaceState')
 
-    let videoObj // 播放器元素
+    let videoObj //播放器元素
+    let keyPressed = {} //按下的所有键
 
     // 缩写
     let find = (selector) => { return document.querySelector(selector) }
@@ -156,9 +157,11 @@ f: 全屏
         if (v == 0) { videoObj.volume = volume }
     }
 
-    let pressKeyborder = function(e) {
+    let pressKeyDown = function(e) {
         if (e && e.key) {
-            debug('e:', e)
+            debug('keyDown e:', e)
+            keyPressed[e.key] = true
+            debug('keyDown keyPressed:', keyPressed)
             // 如果光标在输入框里，快捷键不生效
             if (e.target.tagName === 'TEXTAREA' ||
                 (e.target.tagName === 'INPUT' && ["text", "password", "url", "search", "tel", "email"].includes(e.target.type))
@@ -180,7 +183,7 @@ f: 全屏
                 changePlaySpeed(-0.1)
             } else if (e.key === 'z') { //重置速度
                 changePlaySpeed(99)
-            } else if ('1234567890'.indexOf(e.key) != -1) { //进度条跳转
+            } else if ('1234567890'.indexOf(e.key) != -1 && Object.keys(keyPressed).length === 1) { //进度条跳转
                 videoObj.currentTime = videoObj.duration / 10 * parseInt(e.key)
             } else {
                 return // 如果没有命中任何快捷键就退出
@@ -189,6 +192,17 @@ f: 全屏
             if (e.key === 'w') { e.stopPropagation() } //阻止投币快捷键
         }
     }
+
+    let pressKeyUp = function(e) {
+        debug('keyUp e:', e)
+        delete keyPressed[e.key]
+        debug('keyUp keyPressed:', keyPressed)
+    }
+
+    window.onfocus = function() { // 当窗口获得焦点时
+        debug('Ctrl+数字切出tab页不会清空按键，所以重新进入时清空一下。')
+        keyPressed = {}; // 清空
+    };
 
     let init = function() {
         // 寻找视频播放器 添加功能
@@ -217,7 +231,8 @@ f: 全屏
         }, 500)
 
         // 添加快捷键监听
-        document.addEventListener('keydown', pressKeyborder);
+        document.addEventListener('keydown', pressKeyDown);
+        document.addEventListener('keyup', pressKeyUp);
 
         // 有些元素需要延迟载入 所以让它找一会儿
         let addAutoPlayNext = false //自动分P 是否含有多P
