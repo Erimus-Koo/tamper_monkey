@@ -189,7 +189,7 @@ f: 全屏
                 return // 如果没有命中任何快捷键就退出
             }
             // 如果命中任何快捷键 就阻止传递
-            if (e.key === 'w') { e.stopPropagation() } //阻止投币快捷键
+            e.stopPropagation()
         }
     }
 
