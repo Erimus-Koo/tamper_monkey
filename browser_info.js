@@ -8,31 +8,30 @@
 // @namespace    https://greasyfork.org/users/46393
 // ==/UserScript==
 
-(function(document) {
-
-    let log = (...info) => { console.log(`[Browser Info] ${info.join(' ')}`) }
+(function (document) {
+    // -------------------------------------------------- common - START
+    const log = (...args) => console.log("[B站上单播放器]", ...args);
+    const debug = (...args) => console.debug("[B站上单播放器]", ...args);
+    log("油猴脚本开始");
 
     // detect info via user-agent
-    let ua = navigator.userAgent
-    log('ua:', ua)
+    const ua = navigator.userAgent;
+    log("ua:", ua);
 
-    os = ua.match(/(Windows|Macintosh|iPhone|Android)/)
-    os = os[1] || 'unknown'
-    log('os:', os)
+    const os = ua.match(/(Windows|Macintosh|iPhone|Android)/)?.[1] ?? "unknown";
+    log("os:", os);
 
-    browser = ua.match(/(Chrome|Safari|Firefox)/)
-    browser = browser[1] || 'unknown'
-    log('browser:', browser)
+    const browser = ua.match(/(Chrome|Safari|Firefox)/)?.[1] ?? "unknown";
+    log("browser:", browser);
 
-    chrome_ver = ua.match(/((?<=Chrome\/)\d+)/)
-    chrome_ver = chrome_ver[1] || '0'
-    log('chrome_ver:', chrome_ver)
+    const chrome_ver = ua.match(/((?<=Chrome\/)\d+)/)?.[1] ?? "0";
+    log("chrome_ver:", chrome_ver);
 
     // inject properties into body
-    let html = document.querySelector('html')
-    html.setAttribute('ua-os', os)
-    html.setAttribute('ua-browser', browser)
-    html.setAttribute('ua-chrome-ver', chrome_ver)
+    let html = document.querySelector("html");
+    html.setAttribute("ua-os", os);
+    html.setAttribute("ua-browser", browser);
+    html.setAttribute("ua-chrome-ver", chrome_ver);
 
     // check for 10 times (some page will rewrite the attribute)
     // let count = 0
@@ -43,4 +42,4 @@
     //     count ++
     //     if(count>20){clearInterval(checker)}
     // },500)
-})(document)
+})(document);
