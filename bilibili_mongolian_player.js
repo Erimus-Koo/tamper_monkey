@@ -233,8 +233,14 @@ m: 静音
             // B站自动连播现在会自动播放推荐视频，包括播放列表以外的内容，
             // 单P视频也会连播，此处应有蒙古上单名言。
             videoObj.addEventListener('ended', () => {
-                log('Video ended, try play next...')
+                debug('Video ended, try play next...')
                 find_n_click(eleDict.playNext)
+            })
+
+            videoObj.addEventListener('play', () => {
+                debug('Video start to play ▶')
+                changePlaySpeed()
+                changeVideoVolume()
             })
         })
 
@@ -253,7 +259,7 @@ m: 静音
         setInterval(() => {
             changePlaySpeed()
             changeVideoVolume()
-        }, 5000)
+        }, 10000)
 
         // 阿B已自带以下功能，但不确定是否所有播放器都支持，暂留
 
