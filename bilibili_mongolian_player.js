@@ -31,10 +31,14 @@ shift + left:  上一P
 ====================
 其它功能
 
-- 多 P 自动连播（不会自动播放推荐视频）
 - 开播自动网页全屏
   * 这个是我个人使用习惯，有单独一个chrome窗口在副屏播放视频。
   * 如不需要的可以自行注释掉底部相关代码。
+
+- 多P自动连播（不会自动播放推荐视频）
+  鉴于越来越多UP把视频加入选集，自动连播会播放全部历史视频，所以默认不连播。
+  可以点击原本视频右侧的【开启自动连播】字样开启连播。
+  因为大部分需要连播的场景是新关注了UP或者打开了教程等，手动开启应该可以接受。
 
 ====================
 从定制转变为B站逐渐支持的（也许有人不知道的）功能
@@ -50,157 +54,196 @@ m: 静音
 */
 
 // 在播放器获得焦点时，B站默认有一个快解键F可以切换全屏。
-(function() {
-    'use strict';
+(function () {
+    "use strict";
 
     // -------------------------------------------------- common - START
-    const log = (...args) => console.log('[B站上单播放器]', ...args)
-    const debug = (...args) => console.debug('[B站上单播放器]', ...args)
-    log('油猴脚本开始')
+    const log = (...args) => console.log("[B站上单播放器]", ...args);
+    const debug = (...args) => console.debug("[B站上单播放器]", ...args);
+    log("油猴脚本开始");
 
-    let videoObj //播放器元素 全局
+    let videoObj; //播放器元素 全局
 
-    const find = (selector) => { return document.querySelector(selector) }
+    const find = (selector) => {
+        return document.querySelector(selector);
+    };
     const find_n_click = (selector) => {
-        log(`cmd: document.querySelector('${selector}').click()`)
-        const target = document.querySelector(selector)
-        if (target) { target.click() } //linter不支持?.语法 凑合一下
-    }
+        log(`cmd: document.querySelector('${selector}').click()`);
+        const target = document.querySelector(selector);
+        if (target) {
+            target.click();
+        } //linter不支持?.语法 凑合一下
+    };
     // -------------------------------------------------- common - END
 
-
     // -------------------------------------------------- shortcut - START
-    let keyPressed = {} //按下的所有键 目的是为了区分 1 和 ctrl+1 这种情况
+    let keyPressed = {}; //按下的所有键 目的是为了区分 1 和 ctrl+1 这种情况
 
     // 按键选择器 {按键名称:选择器}
     let eleDict = {
-        'fullscreen': '.bpx-player-ctrl-full', //全屏
-        'webFullscreen': '.bpx-player-ctrl-web', //网页全屏
-        'theaterMode': '.bpx-player-ctrl-wide', //宽屏
-        'miniPlayer': '.bpx-player-ctrl-pip', //画中画
-        'mute': '.bpx-player-ctrl-volume-icon', //静音
-        'danmaku': '.bui-danmaku-switch-input', //弹幕开关
-        'playPrev': '.bpx-player-ctrl-prev', //播放上一P
-        'playNext': '.bpx-player-ctrl-next', //播放下一P
-        'playerWrapper': '.bpx-player-video-wrap', //播放器可双击区域
-        'collect': '.collect', //收藏
-    }
+        fullscreen: ".bpx-player-ctrl-full", //全屏
+        webFullscreen: ".bpx-player-ctrl-web", //网页全屏
+        theaterMode: ".bpx-player-ctrl-wide", //宽屏
+        miniPlayer: ".bpx-player-ctrl-pip", //画中画
+        mute: ".bpx-player-ctrl-volume-icon", //静音
+        danmaku: ".bui-danmaku-switch-input", //弹幕开关
+        playPrev: ".bpx-player-ctrl-prev", //播放上一P
+        playNext: ".bpx-player-ctrl-next", //播放下一P
+        playerWrapper: ".bpx-player-video-wrap", //播放器可双击区域
+        collect: ".collect", //收藏
+    };
 
     // 番剧模式下 播放器元素名称不同
-    if (document.URL.indexOf('bangumi/play') != -1) {
-        eleDict.fullscreen = '.squirtle-video-fullscreen' //全屏
-        eleDict.webFullscreen = '.squirtle-pagefullscreen-inactive' //网页全屏
-        eleDict.theaterMode = '.squirtle-video-widescreen' //宽屏
-        eleDict.miniPlayer = '.squirtle-video-pip' //画中画
-        eleDict.mute = '.squirtle-volume-mute' //静音
-        eleDict.danmaku = '.bpx-player-dm-switch input' //弹幕开关
-        eleDict.playNext = '.squirtle-video-next' //播放下一P
-        eleDict.playerWrapper = '.bpx-player-video-wrap' //播放器可双击区域
+    if (document.URL.indexOf("bangumi/play") != -1) {
+        eleDict.fullscreen = ".squirtle-video-fullscreen"; //全屏
+        eleDict.webFullscreen = ".squirtle-pagefullscreen-inactive"; //网页全屏
+        eleDict.theaterMode = ".squirtle-video-widescreen"; //宽屏
+        eleDict.miniPlayer = ".squirtle-video-pip"; //画中画
+        eleDict.mute = ".squirtle-volume-mute"; //静音
+        eleDict.danmaku = ".bpx-player-dm-switch input"; //弹幕开关
+        eleDict.playNext = ".squirtle-video-next"; //播放下一P
+        eleDict.playerWrapper = ".bpx-player-video-wrap"; //播放器可双击区域
     }
 
     // 稍后播模式下 播放器元素名称不同
-    if (document.URL.indexOf('medialist/play') != -1) {
-        eleDict.fullscreen = '.bilibili-player-video-btn-fullscreen' //全屏
-        eleDict.webFullscreen = '.bilibili-player-video-web-fullscreen' //网页全屏
-        eleDict.theaterMode = '.bilibili-player-video-btn-widescreen' //宽屏
-        eleDict.miniPlayer = '.bilibili-player-video-btn-pip' //画中画
-        eleDict.mute = '.squirtle-volume-mute' //静音
-        eleDict.danmaku = '.bilibili-player-video-danmaku-switch' //弹幕开关
-        eleDict.playNext = '.bilibili-player-video-btn-next' //播放下一P
-        eleDict.playerWrapper = '.bilibili-player-dm-tip-wrap' //播放器可双击区域
+    if (document.URL.indexOf("medialist/play") != -1) {
+        eleDict.fullscreen = ".bilibili-player-video-btn-fullscreen"; //全屏
+        eleDict.webFullscreen = ".bilibili-player-video-web-fullscreen"; //网页全屏
+        eleDict.theaterMode = ".bilibili-player-video-btn-widescreen"; //宽屏
+        eleDict.miniPlayer = ".bilibili-player-video-btn-pip"; //画中画
+        eleDict.mute = ".squirtle-volume-mute"; //静音
+        eleDict.danmaku = ".bilibili-player-video-danmaku-switch"; //弹幕开关
+        eleDict.playNext = ".bilibili-player-video-btn-next"; //播放下一P
+        eleDict.playerWrapper = ".bilibili-player-dm-tip-wrap"; //播放器可双击区域
     }
 
     // 改变并记录速度
-    const changePlaySpeed = function(v = 0) {
-        const LS_playSpeed = 'mongolian_player_playback_speed' //播放速度的存储名
-        let playSpeed = parseFloat(localStorage.getItem(LS_playSpeed)) || 1 //读取播放速度
+    const changePlaySpeed = function (v = 0) {
+        const LS_playSpeed = "mongolian_player_playback_speed"; //播放速度的存储名
+        let playSpeed = parseFloat(localStorage.getItem(LS_playSpeed)) || 1; //读取播放速度
         //参数绝对值小于1时调速 大于1则理解为重置
-        playSpeed = (Math.abs(v) < 1) ? (playSpeed + v) : 1
-        playSpeed = Number(playSpeed.toFixed(2))
-        if (v != 0) { debug(`playSpeed(${v}): ${playSpeed}`) }
-        localStorage.setItem(LS_playSpeed, playSpeed)
-        videoObj.playbackRate = playSpeed
-    }
+        playSpeed = Math.abs(v) < 1 ? playSpeed + v : 1;
+        playSpeed = Number(playSpeed.toFixed(2));
+        if (v != 0) {
+            debug(`playSpeed(${v}): ${playSpeed}`);
+        }
+        localStorage.setItem(LS_playSpeed, playSpeed);
+        videoObj.playbackRate = playSpeed;
+    };
 
     // 记录音量
-    const changeVideoVolume = function(v = 0) {
-        const LS_videoVolume = 'mongolian_player_video_volume' // 播放音量的存储名
-        let volume = parseFloat(localStorage.getItem(LS_videoVolume)) || 0.5 // 读取音量
-        volume = Math.min(Math.max(volume + v, 0), 1)
-        volume = Number(volume.toFixed(2))
-        if (v != 0) { debug(`volume(${v}): ${volume}`) }
-        localStorage.setItem(LS_videoVolume, volume)
+    const changeVideoVolume = function (v = 0) {
+        const LS_videoVolume = "mongolian_player_video_volume"; // 播放音量的存储名
+        let volume = parseFloat(localStorage.getItem(LS_videoVolume)) || 0.5; // 读取音量
+        volume = Math.min(Math.max(volume + v, 0), 1);
+        volume = Number(volume.toFixed(2));
+        if (v != 0) {
+            debug(`volume(${v}): ${volume}`);
+        }
+        localStorage.setItem(LS_videoVolume, volume);
         // 因为B站本身已经有了调音功能 所以只记录 不改变音量 不然会改变多次
-        if (v == 0) { videoObj.volume = volume }
-    }
+        if (v == 0) {
+            videoObj.volume = volume;
+        }
+    };
 
     // 快捷键对应按键
     const shortcutDict = {
-        'a': eleDict.fullscreen, //全屏
-        'w': eleDict.webFullscreen, //网页全屏
-        'k': eleDict.theaterMode, //宽屏
-        'i': eleDict.miniPlayer, //画中画
+        a: eleDict.fullscreen, //全屏
+        w: eleDict.webFullscreen, //网页全屏
+        k: eleDict.theaterMode, //宽屏
+        i: eleDict.miniPlayer, //画中画
         // 'm': eleDict.mute, //静音(播放器自带 加了会变点两次)
         // 'd': eleDict.danmaku, //弹幕开关
-        's': eleDict.collect, //收藏
-    }
+        s: eleDict.collect, //收藏
+    };
     let keyActionsStopPropagation = {
         // 变速（x留给vimium关闭网页）
-        'c': () => changePlaySpeed(0.1),
-        'v': () => changePlaySpeed(-0.1),
-        'z': () => changePlaySpeed(99),
+        c: () => changePlaySpeed(0.1),
+        v: () => changePlaySpeed(-0.1),
+        z: () => changePlaySpeed(99),
         // 跳P
-        'ArrowLeft,Shift': () => find_n_click(eleDict.playPrev),
-        'ArrowRight,Shift': () => find_n_click(eleDict.playNext),
+        "ArrowLeft,Shift": () => find_n_click(eleDict.playPrev),
+        "ArrowRight,Shift": () => find_n_click(eleDict.playNext),
     };
     //进度条跳转
     for (let i = 0; i <= 9; i++) {
-        keyActionsStopPropagation[i.toString()] =
-            () => videoObj.currentTime = videoObj.duration / 10 * i;
+        keyActionsStopPropagation[i.toString()] = () =>
+            (videoObj.currentTime = (videoObj.duration / 10) * i);
     }
     // 以下是不需要阻止事件传播的按键
     // 比如音量调整，阻止了会失去原本的提示浮窗
     const keyActions = {
         // 调整音量
-        'ArrowUp': () => changeVideoVolume(0.1),
-        'ArrowDown': () => changeVideoVolume(-0.1)
-    }
-    const pressKeyDown = function(e) {
-        debug('keyDown e:', e)
-        keyPressed[e.key] = true
-        debug('keyDown keyPressed:', keyPressed)
+        ArrowUp: () => changeVideoVolume(0.1),
+        ArrowDown: () => changeVideoVolume(-0.1),
+    };
+    const pressKeyDown = function (e) {
+        debug("keyDown e:", e);
+        keyPressed[e.key] = true;
+        debug("keyDown keyPressed:", keyPressed);
         const keys = Object.keys(keyPressed).sort().toString();
-        debug('keyDown keys:', keys) //如果多按键会变成"a,b"
+        debug("keyDown keys:", keys); //如果多按键会变成"a,b"
 
         // 如果光标在输入框里，快捷键不生效
-        if (e.target.tagName === 'TEXTAREA' ||
-            (e.target.tagName === 'INPUT' && ["text", "password", "url", "search", "tel", "email"].includes(e.target.type))
-        ) { return }
+        if (
+            e.target.tagName === "TEXTAREA" ||
+            (e.target.tagName === "INPUT" &&
+                ["text", "password", "url", "search", "tel", "email"].includes(
+                    e.target.type,
+                ))
+        ) {
+            return;
+        }
 
         // 设置快捷键
-        if (keys in shortcutDict) { //字典里定义的直接搜索并点击的快捷键
-            find_n_click(shortcutDict[keys])
-            e.stopPropagation()
-        } else if (keys in keyActionsStopPropagation) { //运行自定义函数的快捷键
-            keyActionsStopPropagation[keys]()
-            e.stopPropagation()
-        } else if (keys in keyActions) { //不需要阻止传递的快捷键
-            keyActions[keys]()
+        if (keys in shortcutDict) {
+            //字典里定义的直接搜索并点击的快捷键
+            find_n_click(shortcutDict[keys]);
+            e.stopPropagation();
+        } else if (keys in keyActionsStopPropagation) {
+            //运行自定义函数的快捷键
+            keyActionsStopPropagation[keys]();
+            e.stopPropagation();
+        } else if (keys in keyActions) {
+            //不需要阻止传递的快捷键
+            keyActions[keys]();
         }
-    }
+    };
 
-    const pressKeyUp = function(e) {
-        debug('keyUp e:', e)
-        delete keyPressed[e.key]
-        debug('keyUp keyPressed:', keyPressed)
-    }
+    const pressKeyUp = function (e) {
+        debug("keyUp e:", e);
+        delete keyPressed[e.key];
+        debug("keyUp keyPressed:", keyPressed);
+    };
 
-    window.onfocus = function() { // 当窗口获得焦点时
-        debug('Ctrl+数字切出tab页不会清空按键，所以重新进入时清空一下。')
+    window.onfocus = function () {
+        // 当窗口获得焦点时
+        debug("Ctrl+数字切出tab页不会清空按键，所以重新进入时清空一下。");
         keyPressed = {}; // 清空
     };
     // -------------------------------------------------- shortcut - END
 
+    // -------------------------------------------------- 自动连播 - START
+    let autoPlayNextVideo = false;
+    function addAutoPlayNextBtn(originNode) {
+        originNode.style.background = "#06f";
+        originNode.style.color = "#fff";
+        originNode.style.padding = ".25em .5em";
+        originNode.style.borderRadius = ".25em";
+        originNode.style.cursor = "pointer";
+        originNode.textContent = "开启连播";
+        // 点击连播切换状态
+        originNode.addEventListener("click", function (event) {
+            autoPlayNextVideo = !autoPlayNextVideo;
+            // 开启连播设置颜色为红色
+            this.style.background = autoPlayNextVideo ? "#f33" : "#06f";
+            this.textContent = autoPlayNextVideo ? "正在连播" : "开启连播";
+            event.stopPropagation();
+        });
+        debug("自动连播:", autoPlayNextVideo);
+    }
+    // -------------------------------------------------- 自动连播 - END
 
     // -------------------------------------------------- init - START
     // 观察对象，等待其出现后，运行函数
@@ -208,7 +251,7 @@ m: 静音
         // 创建一个观察器实例
         const observer = new MutationObserver((mutationsList, observer) => {
             // 如果页面上的元素a已经加载
-            let target = document.querySelector(selector)
+            let target = document.querySelector(selector);
             if (target) {
                 observer.disconnect(); // 停止观察
                 runAfterElementFound(target); // 运行你的函数
@@ -216,50 +259,55 @@ m: 静音
         });
 
         // 开始观察document，观察子节点和后代节点的添加或者删除
-        const config = { childList: true, attributes: true, subtree: true }
+        const config = { childList: true, attributes: true, subtree: true };
         observer.observe(document, config);
     }
 
     // 初始化动作（以前B站跳转油猴不会重载，所以抽象，现在似乎已无必要）
-    const init = function() {
-        debug('Init:', document.URL)
+    const init = function () {
+        debug("Init:", document.URL);
 
         // 寻找视频对象 载入播放速度
-        observe_and_run(`${eleDict.playerWrapper} video`, target => {
-            videoObj = find(`${eleDict.playerWrapper} video`) //global
-            changePlaySpeed(0) // 载入保存的播放速度
+        observe_and_run(`${eleDict.playerWrapper} video`, (target) => {
+            videoObj = find(`${eleDict.playerWrapper} video`); //global
+            changePlaySpeed(0); // 载入保存的播放速度
 
             // 自动切P （自动播放关闭，当视频播放结束时自动按下一P按钮。）
             // B站自动连播现在会自动播放推荐视频，包括播放列表以外的内容，
             // 单P视频也会连播，此处应有蒙古上单名言。
-            videoObj.addEventListener('ended', () => {
-                debug('Video ended, try play next...')
-                find_n_click(eleDict.playNext)
-            })
+            videoObj.addEventListener("ended", () => {
+                debug("Video ended, try play next...");
+                if (autoPlayNextVideo) {
+                    find_n_click(eleDict.playNext);
+                }
+            });
 
-            videoObj.addEventListener('play', () => {
-                debug('Video start to play ▶')
-                changePlaySpeed()
-                changeVideoVolume()
-            })
-        })
+            videoObj.addEventListener("play", () => {
+                debug("Video start to play ▶");
+                changePlaySpeed();
+                changeVideoVolume();
+            });
+        });
 
         // 寻找网页全屏按钮并自动网页全屏
-        observe_and_run(eleDict.webFullscreen, fullScreenBtn => {
-            fullScreenBtn.click()
-        })
+        observe_and_run(eleDict.webFullscreen, (fullScreenBtn) => {
+            fullScreenBtn.click();
+        });
+
+        // 寻找播放下一个按钮并插入开关
+        observe_and_run(".next-button .txt", addAutoPlayNextBtn);
 
         // 添加快捷键监听
-        document.addEventListener('keydown', pressKeyDown);
-        document.addEventListener('keyup', pressKeyUp);
+        document.addEventListener("keydown", pressKeyDown);
+        document.addEventListener("keyup", pressKeyUp);
 
         // 定期执行，让播放速度和音量统一为设定值
         // 连播目前检测不到 不会重新执行油猴
         // 或是开了多个窗口 调整了其中一个的速度 其他窗口速度并不会跟着变
         setInterval(() => {
-            changePlaySpeed()
-            changeVideoVolume()
-        }, 10000)
+            changePlaySpeed();
+            changeVideoVolume();
+        }, 10000);
 
         // 阿B已自带以下功能，但不确定是否所有播放器都支持，暂留
 
@@ -282,8 +330,7 @@ m: 静音
         //         continuedBtn.click()
         //     }
         // })
-    }
-    init()
+    };
+    init();
     // -------------------------------------------------- init - END
-
 })();
