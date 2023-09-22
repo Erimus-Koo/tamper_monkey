@@ -226,21 +226,46 @@ m: 静音
 
     // -------------------------------------------------- 自动连播 - START
     let autoPlayNextVideo = false;
-    function addAutoPlayNextBtn(originNode) {
-        originNode.style.background = "#06f";
-        originNode.style.color = "#fff";
-        originNode.style.padding = ".25em .5em";
-        originNode.style.borderRadius = ".25em";
-        originNode.style.cursor = "pointer";
-        originNode.textContent = "开启连播";
+    function setupButton(
+        button,
+        defaultText = "开启连播",
+        activeText = "正在连播",
+    ) {
+        button.style.background = "#06f";
+        button.style.color = "#fff";
+        button.style.padding = ".25em .5em";
+        button.style.borderRadius = ".25em";
+        button.style.cursor = "pointer";
+        button.textContent = defaultText;
+
         // 点击连播切换状态
-        originNode.addEventListener("click", function (event) {
+        button.addEventListener("click", function (event) {
             autoPlayNextVideo = !autoPlayNextVideo;
             // 开启连播设置颜色为红色
             this.style.background = autoPlayNextVideo ? "#f33" : "#06f";
-            this.textContent = autoPlayNextVideo ? "正在连播" : "开启连播";
+            this.textContent = autoPlayNextVideo ? activeText : defaultText;
             event.stopPropagation();
         });
+    }
+    function addAutoPlayNextBtn(nextBtn) {
+        // listTitle 是播放列表右上角的原连播按钮左侧的文字
+        const listTitle = document.querySelector(".next-button .txt");
+        const newBtn = document.createElement("a");
+
+        setupButton(listTitle);
+        setupButton(newBtn);
+
+        newBtn.id = "autoPlayNextVideo";
+        nextBtn.parentNode.insertBefore(newBtn, nextBtn); //insert btn
+
+        // 强制让播放栏在暂停/播完时显示
+        const style = document.createElement("style");
+        // 以下选择器是要同时满足视频暂停 和控制栏隐藏 目前只适配了常规视频
+        const hiddenSelector = ".bpx-state-paused .bpx-player-control-bottom";
+        style.textContent = `${hiddenSelector}{opacity:1!important}
+#autoPlayNextVideo{position:absolute;top:-4rem;left:1rem;font-size:1rem;line-height:2;padding:0 1rem;}`;
+        document.head.appendChild(style);
+
         debug("自动连播:", autoPlayNextVideo);
     }
     // -------------------------------------------------- 自动连播 - END
@@ -295,7 +320,7 @@ m: 静音
         });
 
         // 寻找播放下一个按钮并插入开关
-        observe_and_run(".next-button .txt", addAutoPlayNextBtn);
+        observe_and_run(eleDict.playNext, addAutoPlayNextBtn);
 
         // 添加快捷键监听
         document.addEventListener("keydown", pressKeyDown);
