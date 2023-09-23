@@ -27,11 +27,18 @@
     const chrome_ver = ua.match(/((?<=Chrome\/)\d+)/)?.[1] ?? "0";
     log("chrome_ver:", chrome_ver);
 
+    // get language
+    const lang = navigator.language || navigator.userLanguage;
+    log("lang:", lang);
+
     // inject properties into body
     let html = document.querySelector("html");
     html.setAttribute("ua-os", os);
     html.setAttribute("ua-browser", browser);
     html.setAttribute("ua-chrome-ver", chrome_ver);
+    if (lang) {
+        html.setAttribute("e-lang", lang);
+    }
 
     // check for 10 times (some page will rewrite the attribute)
     // let count = 0
