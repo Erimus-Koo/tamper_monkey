@@ -250,11 +250,12 @@ m: 静音
     function addAutoPlayNextBtn(nextBtn) {
         // listTitle 是播放列表右上角的原连播按钮左侧的文字
         const listTitle = document.querySelector(".next-button .txt");
+        if (listTitle) {
+            setupButton(listTitle);
+        }
+
         const newBtn = document.createElement("a");
-
-        setupButton(listTitle);
         setupButton(newBtn);
-
         newBtn.id = "autoPlayNextVideo";
         nextBtn.parentNode.insertBefore(newBtn, nextBtn); //insert btn
 
