@@ -267,6 +267,29 @@ m: 静音
 
     debug("自动连播:", autoPlayNextVideo);
   }
+
+  function playNextVideo() {
+    // B站的列表（播放全部 稍后播）默认会循环播放，为了点播放量B脸都不要了。
+    // 这里先判断如果是顺序播放，并且当前为列表最后一个视频，则不再继续播。
+    const loopDiv = document.querySelector(
+      '.action-list-header div[title="列表循环"]'
+    );
+    if (loopDiv) {
+      // 获取播放列表
+      const itemWraps = document.querySelectorAll(
+        ".action-list-inner .action-list-item-wrap"
+      );
+      // 获取最后一个 action-list-item-wrap 元素
+      const lastItemWrap = itemWraps[itemWraps.length - 1];
+      // 检查最后一个元素是否含有 siglep-active 类
+      if (lastItemWrap.querySelector(".siglep-active")) {
+        debug(`This is the last video`);
+        return;
+      }
+    }
+    // 点击下一个视频
+    find_n_click(eleDict.playNext);
+  }
   // -------------------------------------------------- 自动连播 - END
 
   // -------------------------------------------------- init - START
@@ -302,7 +325,7 @@ m: 静音
       videoObj.addEventListener("ended", () => {
         debug("Video ended, try play next...");
         if (autoPlayNextVideo) {
-          find_n_click(eleDict.playNext);
+          playNextVideo();
         }
       });
 
