@@ -133,6 +133,7 @@ m: 静音
   // -------------------------------------------------- 播放速度 - START
   let isDefaultSpeed = false; //for toggle
   let videoChannel; //视频所在的频道、分类
+  const excludedChannels = ["音乐", "舞蹈"];
 
   const getVideoChannel = () => {
     return document.querySelector(".firstchannel-tag a")?.textContent;
@@ -152,7 +153,7 @@ m: 静音
     if (v === 0) {
       // v===0 则不改变速度 直接载入存储的速度
       // 但不改变音乐区的默认播放速度
-      if (videoChannel == "音乐") return;
+      if (excludedChannels.includes(videoChannel)) return;
       setSpeed(isDefaultSpeed ? 1 : playSpeed);
     } else if (Math.abs(v) > 1) {
       // v大于1则理解为在当前速度和存储速度间切换
@@ -316,29 +317,33 @@ m: 静音
 
       style.textContent = `
       .auto-play-next-video{
-        position:relative;cursor:pointer;
-        background:#06f;color:#fff!important;line-height:1.25;
-        padding:.25em .5em;margin:0 .25em;border-radius:.25em;
+        position:relative;cursor:pointer;line-height:1.5;
+        padding:.25em .75em;margin:0 .25em;border-radius:3em;
+        background:#06fc;color:#fff!important;
       }
       .auto-play-next-video::before{content:'开启连播'}
+      .auto-play-next-video:hover{background:#06f}
       
-      .auto-play-next-video.active{background:#f33;}
+      .auto-play-next-video.active{background:#f33c}
       .auto-play-next-video.active::before{content:'正在连播'}
+      .auto-play-next-video.active:hover{background:#f33}
 
       .auto-play-next-video::after{
         content:"仅连播列表内的视频";white-space:nowrap;
-        display:none;position:absolute;top:-2em;left:0;
-        background:#000c;padding:.25em .5em;border-radius:.25em;
+        display:none;position:absolute;top:-120%;left:0;
+        padding:.25em .75em;border-radius:3em;background:#0009;
       }
       .auto-play-next-video:hover::after{display:block;}
     `;
       // 给进度栏的按钮追加样式
       style.textContent += `.bpx-player-control-bottom .auto-play-next-video{
-        position:absolute;top:-4rem;left:1rem;font-size:1rem;padding:.5em 1em;}`;
+        position:absolute;top:-4rem;left:1rem;font-size:1rem;}`;
       // 修复列表顶部布局
-      style.textContent += `.video-sections-head_first-line .first-line-right{flex:none;}`;
+      style.textContent += `.video-sections-head_first-line 
+      .first-line-right{flex:none;}`;
       // 暂停时强制显示视频控制栏
-      style.textContent += `.bpx-state-paused .bpx-player-control-bottom{opacity:1!important}`;
+      style.textContent += `.bpx-state-paused 
+      .bpx-player-control-bottom{opacity:1!important}`;
       document.head.appendChild(style);
     }
 
