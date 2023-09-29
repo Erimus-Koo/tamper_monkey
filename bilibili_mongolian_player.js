@@ -72,7 +72,119 @@ m: 静音
     const target = document.querySelector(selector);
     target?.click();
   };
+
+  // 信息提示窗
+  let notifyDelay;
+  function notify(
+    content,
+    originSelector = "body",
+    offsetX = 0,
+    offsetY = 0,
+    delay = 3
+  ) {
+    // 检查已有的通知容器
+    let notificationElement = document.querySelector(
+      `.notification[data-target="${originSelector}"]`
+    );
+    if (notificationElement) {
+      debug("notify existed");
+      clearTimeout(notifyDelay);
+    } else {
+      // create notification
+      notificationElement = document.createElement("div");
+      notificationElement.className = "notification";
+      notificationElement.setAttribute("data-target", originSelector);
+      document.body.appendChild(notificationElement);
+    }
+    debug("noti ele:", notificationElement);
+    notificationElement.innerHTML = content; //更新消息
+    debug("update notify conent");
+
+    // 消息出现的定位点
+    const origin = document.querySelector(originSelector);
+    const rect = origin?.getBoundingClientRect();
+    debug(`Notify origin: left=${rect?.left} top=${rect?.top}`);
+    notificationElement.style.left = `${rect ? rect.left + offsetX : 20}px`;
+    notificationElement.style.top = `${rect ? rect.top + offsetY : 20}px`;
+    debug("style:", notificationElement.style);
+
+    // 添加样式
+    const existingStyle = document.querySelector(
+      `style[data-target="${originSelector}"]`
+    );
+    if (!existingStyle) {
+      const style = document.createElement("style");
+      style.textContent = `.${notificationElement.className}{
+      position:absolute;z-index:999999;
+      font-size:1rem;color:#fff;background:#000c;
+      padding:.5em 1em;border-radius:.5em;
+    }`;
+      style.setAttribute("data-target", originSelector);
+      document.head.appendChild(style);
+    }
+
+    // 设置浮窗的淡出效果
+    notifyDelay = setTimeout(() => {
+      notificationElement.remove();
+    }, delay * 1000); // 3秒后触发淡出效果
+  }
   // -------------------------------------------------- common - END
+
+  // -------------------------------------------------- 播放速度 - START
+  let isDefaultSpeed = false; //for toggle
+  let videoChannel; //视频所在的频道、分类
+
+  const getVideoChannel = () => {
+    return document.querySelector(".firstchannel-tag a")?.textContent;
+  };
+
+  const setSpeed = (speed) => {
+    if (videoObj.playbackRate === speed) return;
+    videoObj.playbackRate = speed;
+    const content = `播放速度: ${speed}<br><code style="color:#f90;font-size:.9em">C:加速 V:减速 Z:还原</code>`;
+    notify(content, ".bpx-player-ctrl-playbackrate", 0, -100);
+  };
+
+  // 改变并记录速度
+  const changePlaySpeed = function (v = 0) {
+    const LS_playSpeed = "mongolian_player_playback_speed"; //播放速度的存储名
+    let playSpeed = parseFloat(localStorage.getItem(LS_playSpeed)) || 1; //读取播放速度
+    if (v === 0) {
+      // v===0 则不改变速度 直接载入存储的速度
+      // 但不改变音乐区的默认播放速度
+      if (videoChannel == "音乐") return;
+      setSpeed(isDefaultSpeed ? 1 : playSpeed);
+    } else if (Math.abs(v) > 1) {
+      // v大于1则理解为在当前速度和存储速度间切换
+      isDefaultSpeed = !isDefaultSpeed;
+      setSpeed(isDefaultSpeed ? 1 : playSpeed);
+    } else {
+      // v小于1时调速
+      playSpeed = Math.max(playSpeed + v, 0);
+      playSpeed = Number(playSpeed.toFixed(2));
+      debug(`playSpeed(${v}): ${playSpeed}`);
+      localStorage.setItem(LS_playSpeed, playSpeed);
+      setSpeed(playSpeed);
+    }
+  };
+  // -------------------------------------------------- 播放速度 - END
+
+  // -------------------------------------------------- 音量控制 - START
+  const changeVideoVolume = function (v = 0) {
+    const LS_videoVolume = "mongolian_player_video_volume"; // 播放音量的存储名
+    let volume = parseFloat(localStorage.getItem(LS_videoVolume)) || 0.5; // 读取音量
+    volume = Math.min(Math.max(volume + v, 0), 1);
+    volume = Number(volume.toFixed(2));
+    if (v != 0) {
+      debug(`volume(${v}): ${volume}`);
+    }
+    localStorage.setItem(LS_videoVolume, volume);
+    // 因为B站本身已经有了调音功能 所以只记录 不改变音量 不然会改变多次
+    if (v == 0) {
+      videoObj.volume = volume;
+    }
+  };
+  // -------------------------------------------------- 音量控制 - END
 
   // -------------------------------------------------- shortcut - START
   let keyPressed = {}; //按下的所有键 目的是为了区分 1 和 ctrl+1 这种情况
@@ -115,36 +227,6 @@ m: 静音
     eleDict.playerWrapper = ".bilibili-player-dm-tip-wrap"; //播放器可双击区域
   }
 
-  // 改变并记录速度
-  const changePlaySpeed = function (v = 0) {
-    const LS_playSpeed = "mongolian_player_playback_speed"; //播放速度的存储名
-    let playSpeed = parseFloat(localStorage.getItem(LS_playSpeed)) || 1; //读取播放速度
-    //参数绝对值小于1时调速 大于1则理解为重置
-    playSpeed = Math.abs(v) < 1 ? playSpeed + v : 1;
-    playSpeed = Number(playSpeed.toFixed(2));
-    if (v != 0) {
-      debug(`playSpeed(${v}): ${playSpeed}`);
-    }
-    localStorage.setItem(LS_playSpeed, playSpeed);
-    videoObj.playbackRate = playSpeed;
-  };
-
-  // 记录音量
-  const changeVideoVolume = function (v = 0) {
-    const LS_videoVolume = "mongolian_player_video_volume"; // 播放音量的存储名
-    let volume = parseFloat(localStorage.getItem(LS_videoVolume)) || 0.5; // 读取音量
-    volume = Math.min(Math.max(volume + v, 0), 1);
-    volume = Number(volume.toFixed(2));
-    if (v != 0) {
-      debug(`volume(${v}): ${volume}`);
-    }
-    localStorage.setItem(LS_videoVolume, volume);
-    // 因为B站本身已经有了调音功能 所以只记录 不改变音量 不然会改变多次
-    if (v == 0) {
-      videoObj.volume = volume;
-    }
-  };
-
   // 快捷键对应按键
   const shortcutDict = {
     a: eleDict.fullscreen, //全屏
@@ -157,9 +239,9 @@ m: 静音
   };
   let keyActionsStopPropagation = {
     // 变速（x留给vimium关闭网页）
-    c: () => changePlaySpeed(0.1),
-    v: () => changePlaySpeed(-0.1),
-    z: () => changePlaySpeed(99),
+    c: () => changePlaySpeed(0.1), //加速
+    v: () => changePlaySpeed(-0.1), //减速
+    z: () => changePlaySpeed(99), //toggle 默认速度
     // 跳P
     "ArrowLeft,Shift": () => find_n_click(eleDict.playPrev),
     "ArrowRight,Shift": () => find_n_click(eleDict.playNext),
@@ -317,6 +399,9 @@ m: 静音
     // 寻找视频对象 载入播放速度
     observe_and_run(`${eleDict.playerWrapper} video`, (target) => {
       videoObj = find(`${eleDict.playerWrapper} video`); //global
+      videoChannel = getVideoChannel();
+      debug("Video Channel:", videoChannel);
+
       changePlaySpeed(0); // 载入保存的播放速度
 
       // 自动切P （自动播放关闭，当视频播放结束时自动按下一P按钮。）
