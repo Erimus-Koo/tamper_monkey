@@ -306,49 +306,68 @@ m: 静音
 
   // -------------------------------------------------- 自动连播 - START
   let autoPlayNextVideo = false;
-  function setupButton(
-    button,
-    defaultText = "开启连播",
-    activeText = "正在连播"
-  ) {
-    button.style.background = "#06f";
-    button.style.color = "#fff";
-    button.style.padding = ".25em .5em";
-    button.style.borderRadius = ".25em";
-    button.style.cursor = "pointer";
-    button.textContent = defaultText;
+
+  const setupPlayNextButton = (button) => {
+    // 添加样式
+    const existingStyle = document.querySelector(`style[data-id="playNext"]`);
+    if (!existingStyle) {
+      const style = document.createElement("style");
+      style.setAttribute("data-id", "playNext");
+
+      style.textContent = `
+      .auto-play-next-video{
+        position:relative;cursor:pointer;
+        background:#06f;color:#fff!important;line-height:1.25;
+        padding:.25em .5em;margin:0 .25em;border-radius:.25em;
+      }
+      .auto-play-next-video::before{content:'开启连播'}
+      
+      .auto-play-next-video.active{background:#f33;}
+      .auto-play-next-video.active::before{content:'正在连播'}
+
+      .auto-play-next-video::after{
+        content:"仅连播列表内的视频";white-space:nowrap;
+        display:none;position:absolute;top:-2em;left:0;
+        background:#000c;padding:.25em .5em;border-radius:.25em;
+      }
+      .auto-play-next-video:hover::after{display:block;}
+    `;
+      // 给进度栏的按钮追加样式
+      style.textContent += `.bpx-player-control-bottom .auto-play-next-video{
+        position:absolute;top:-4rem;left:1rem;font-size:1rem;padding:.5em 1em;}`;
+      // 修复列表顶部布局
+      style.textContent += `.video-sections-head_first-line .first-line-right{flex:none;}`;
+      // 暂停时强制显示视频控制栏
+      style.textContent += `.bpx-state-paused .bpx-player-control-bottom{opacity:1!important}`;
+      document.head.appendChild(style);
+    }
 
     // 点击连播切换状态
     button.addEventListener("click", function (event) {
       autoPlayNextVideo = !autoPlayNextVideo;
-      // 开启连播设置颜色为红色
-      this.style.background = autoPlayNextVideo ? "#f33" : "#06f";
-      this.textContent = autoPlayNextVideo ? activeText : defaultText;
+      document.querySelectorAll(".auto-play-next-video").forEach((node) => {
+        node.classList.toggle("active");
+      });
       event.stopPropagation();
     });
-  }
-  function addAutoPlayNextBtn(nextBtn) {
+  };
+
+  const addAutoPlayNextBtn = (nextBtn) => {
     // listTitle 是播放列表右上角的原连播按钮左侧的文字
     const listTitle = document.querySelector(".next-button .txt");
     if (listTitle) {
-      setupButton(listTitle);
+      listTitle.textContent = "";
+      listTitle.className = "auto-play-next-video";
+      setupPlayNextButton(listTitle);
     }
 
     const newBtn = document.createElement("a");
-    setupButton(newBtn);
-    newBtn.id = "autoPlayNextVideo";
+    setupPlayNextButton(newBtn);
+    newBtn.className = "auto-play-next-video";
     nextBtn.parentNode.insertBefore(newBtn, nextBtn); //insert btn
 
-    // 强制让播放栏在暂停/播完时显示
-    const style = document.createElement("style");
-    // 以下选择器是要同时满足视频暂停 和控制栏隐藏 目前只适配了常规视频
-    const hiddenSelector = ".bpx-state-paused .bpx-player-control-bottom";
-    style.textContent = `${hiddenSelector}{opacity:1!important}
-#autoPlayNextVideo{position:absolute;top:-4rem;left:1rem;font-size:1rem;line-height:2;padding:0 1rem;}`;
-    document.head.appendChild(style);
-
     debug("自动连播:", autoPlayNextVideo);
-  }
+  };
 
   function playNextVideo() {
     // B站的列表（播放全部 稍后播）默认会循环播放，为了点播放量B脸都不要了。
