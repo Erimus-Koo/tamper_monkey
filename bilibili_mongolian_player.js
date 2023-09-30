@@ -337,7 +337,7 @@ m: 静音
     `;
       // 给进度栏的按钮追加样式
       style.textContent += `.bpx-player-control-bottom .auto-play-next-video{
-        position:absolute;top:-4rem;left:1rem;font-size:1rem;}`;
+        position:absolute;top:-3rem;left:1rem;font-size:1rem;}`;
       // 修复列表顶部布局
       style.textContent += `.video-sections-head_first-line 
       .first-line-right{flex:none;}`;
