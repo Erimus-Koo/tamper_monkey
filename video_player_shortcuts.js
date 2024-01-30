@@ -23,7 +23,7 @@ z: 播放恢复原速
 (function () {
   ("use strict");
   const blacklist = ["bilibili"];
-  let videoObj = null; //当前正在播放的视频
+  let videoObj = null; //当前正在播放的视频（含音频）
   let videoObjAll = []; //所有播放器组
   let fullScreen = false; //当前的全屏状态
 
@@ -45,7 +45,7 @@ z: 播放恢复原速
   let notifyDelay;
   function notify(content, delay = 3) {
     // 检查已有的通知容器
-    const notiName = "video-player-shortcut";
+    const notiName = "media-player-shortcut";
     let notificationElement = document.querySelector(
       `.notification[data-target="${notiName}"]`
     );
@@ -93,7 +93,13 @@ z: 播放恢复原速
     if (videoObj.playbackRate === speed) return;
     videoObj.playbackRate = speed;
     const content = `播放速度: ${speed}<br><code style="color:#f90;font-size:.9em">C:加速 V:减速 Z:还原</code>`;
-    if (videoObj.offsetWidth > 200 && videoObj.offsetHeight > 200) {
+    if (videoObj instanceof HTMLVideoElement) {
+      // video: 在较小的视频 如GIF 表情包等场景下 不提示
+      if (videoObj.offsetWidth > 200 && videoObj.offsetHeight > 200) {
+        notify(content);
+      }
+    } else {
+      // audio
       notify(content);
     }
   };
@@ -189,6 +195,7 @@ z: 播放恢复原速
     keyActionsStopPropagation[i.toString()] = () =>
       (videoObj.currentTime = (videoObj.duration / 10) * i);
   }
+  debug("keyActionsStopPropagation:", keyActionsStopPropagation);
   // 以下是不需要阻止事件传播的按键
   // 比如音量调整，阻止了会失去原本的提示浮窗
   const keyActions = {
@@ -250,11 +257,13 @@ z: 播放恢复原速
   // 观察页面，如果出现新的video元素，则记录到列表中
   const observeVideos = () => {
     const videoElements = document.querySelectorAll("video");
-    videoElements.forEach((videoElement) => {
-      if (!videoObjAll.includes(videoElement)) {
-        videoObjAll.push(videoElement);
-        // console.debug("📷 Find new video element:", videoElement);
-        videoElement.addEventListener("play", videoStartPlay);
+    const audioElements = document.querySelectorAll("audio");
+    const mediaElements = [...videoElements, ...audioElements];
+    mediaElements.forEach((media) => {
+      if (!videoObjAll.includes(media)) {
+        videoObjAll.push(media);
+        // console.debug("📷 Find new video element:", media);
+        media.addEventListener("play", videoStartPlay);
       }
     });
   };
