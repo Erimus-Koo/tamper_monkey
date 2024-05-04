@@ -6,12 +6,17 @@
 // @author       Erimus
 // @grant        none
 // @namespace    https://greasyfork.org/users/46393
+// @require      https://raw.githubusercontent.com/Erimus-Koo/tamper_monkey/master/browser_info.js?v=0930
 // ==/UserScript==
+
+// @require      file://D:\OneDrive\05ProgramProject\tamper_monkey\browser_info.js
+// @require      file:///Users/erimus/OneDrive/05ProgramProject/tamper_monkey/browser_info.js
+// @require      https://raw.githubusercontent.com/Erimus-Koo/tamper_monkey/master/browser_info.js
 
 (function (document) {
     // -------------------------------------------------- common - START
-    const log = (...args) => console.log("[B站上单播放器]", ...args);
-    const debug = (...args) => console.debug("[B站上单播放器]", ...args);
+    const log = (...args) => console.log("[Browser Info]", ...args);
+    const debug = (...args) => console.debug("[Browser Info]", ...args);
     log("油猴脚本开始");
 
     // detect info via user-agent
