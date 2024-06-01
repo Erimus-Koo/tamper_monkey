@@ -50,7 +50,9 @@
 
     // 读取作者
     const authorList = Array.from(
-      document.querySelectorAll('span.author-data[property="author"]')
+      document.querySelectorAll(
+        'span.author-data[property="author"],span.author-data[property="creator"]'
+      )
     )?.map((a) => a.querySelector("a").textContent.trim());
     debug("authorList:", authorList);
 
@@ -81,12 +83,6 @@
       contributorMeta += list2yaml(contributorDict[role]);
     }
 
-    // 获取出版社
-    const publisher = document.querySelector(
-      'span[property="publisher"]>span'
-    ).textContent;
-    debug("publisher:", publisher);
-
     // 获取通用信息
     let metaDict = {};
     Array.from(document.querySelectorAll("#table-detail tr")).forEach((row) => {
@@ -96,17 +92,26 @@
     });
     debug("metaDict:", metaDict, metaDict["ISBN"]);
 
+    // 读取封面
+    let cover =
+      window.location.origin +
+      document
+        .querySelector('img[referrerpolicy="no-referrer"]')
+        .getAttribute("src");
+
     // 根据规则转换格式
     const frontMatter = `---
 Author:
 ${list2yaml(authorList)}
-Publisher: ${publisher}
+Publisher: ${metaDict["出版社"]}
 ISBN: ${metaDict["ISBN"]}
 索书号: ${metaDict["索书号"]}
 上图网址: ${url}
 tags: 
 ${contributorMeta}
----`;
+---
+![Cover|200](${cover})
+`;
 
     // 复制到剪贴板
     navigator.clipboard.writeText(frontMatter);
