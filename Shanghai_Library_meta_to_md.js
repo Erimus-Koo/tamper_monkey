@@ -19,7 +19,7 @@
   const debug = (...args) => console.debug("[上图信息提取]", ...args);
   log("油猴脚本开始");
 
-  const list2yaml = (arr) => arr.map((c) => `  - ${c}\n`);
+  const list2yaml = (arr) => arr.map((c) => `  - ${c}`).join(`\n`);
 
   // -------------------------------------------------- common - END
 
