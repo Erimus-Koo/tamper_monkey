@@ -105,7 +105,7 @@ Title: ${title}
 Author:
 ${list2yaml(authorList)}
 Publisher: ${metaDict["出版社"]}
-ISBN: ${metaDict["ISBN"]}
+ISBN: "${metaDict["ISBN"]}"
 索书号: ${metaDict["索书号"]}
 上图网址: ${url}
 tags: 
