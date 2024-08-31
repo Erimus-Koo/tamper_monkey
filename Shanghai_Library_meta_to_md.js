@@ -101,6 +101,7 @@
 
     // 根据规则转换格式
     const frontMatter = `---
+Title: ${title}
 Author:
 ${list2yaml(authorList)}
 Publisher: ${metaDict["出版社"]}
@@ -110,6 +111,9 @@ ISBN: ${metaDict["ISBN"]}
 tags: 
 ${contributorMeta}
 ---
+
+# ${title}
+
 ![Cover|200](${cover})
 `;
 
