@@ -41,7 +41,8 @@
 
   const meta2md = () => {
     // 读取书名
-    const title = document.querySelector(".media-body>h3").textContent.trim();
+    let title = document.querySelector(".media-body>h3").textContent.trim();
+    title = title.replace(/[\s\/]+$/, ""); //remove right side useless letters
     debug("title:", title);
 
     // 获取当前页面的网址
@@ -101,15 +102,19 @@
 
     // 根据规则转换格式
     const frontMatter = `---
+Title: "${title}"
 Author:
 ${list2yaml(authorList)}
 Publisher: ${metaDict["出版社"]}
-ISBN: ${metaDict["ISBN"]}
+ISBN: "${metaDict["ISBN"]}"
 索书号: ${metaDict["索书号"]}
 上图网址: ${url}
 tags: 
 ${contributorMeta}
 ---
+
+# ${title}
+
 ![Cover|200](${cover})
 `;
 
