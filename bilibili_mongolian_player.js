@@ -358,7 +358,7 @@ m: 静音
         } else {
           node.classList.add("active");
         }
-        node.innerHTML = ["开启连播", "正在连播", "正在倒序连播"][autoPlayNext];
+        node.innerHTML = ["开启连播", "正序连播中", "倒序连播中"][autoPlayNext];
       });
       event.stopPropagation();
     });
@@ -368,7 +368,7 @@ m: 静音
     // listTitle 是播放列表右上角的原连播按钮左侧的文字
     const listTitle = document.querySelector(".next-button .txt");
     if (listTitle) {
-      listTitle.textContent = "";
+      listTitle.innerHTML = "开启连播";
       listTitle.className = "auto-play-next-video";
       setupPlayNextButton(listTitle);
     }
