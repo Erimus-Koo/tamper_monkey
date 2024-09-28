@@ -171,7 +171,6 @@ m: 静音
 
   // -------------------------------------------------- 播放速度 - START
   let isDefaultSpeed = false; //for toggle
-  let videoChannel; //视频所在的频道、分类
   const excludedChannels = ["音乐", "舞蹈"];
 
   const getVideoChannel = () => {
@@ -194,7 +193,10 @@ m: 静音
     if (v === 0) {
       // v===0 则不改变速度 直接载入存储的速度
       // 但不改变音乐区的默认播放速度
+      const videoChannel = getVideoChannel(); //视频所在的频道、分类
+      debug("Video Channel:", videoChannel);
       if (excludedChannels.includes(videoChannel)) return;
+
       setSpeed(isDefaultSpeed ? 1 : playSpeed);
     } else if (Math.abs(v) > 1) {
       // v大于1则理解为在当前速度和存储速度间切换
@@ -380,7 +382,7 @@ m: 静音
 
   window.onfocus = function () {
     // 当窗口获得焦点时
-    debug("Ctrl+数字切出tab页不会清空按键，所以重新进入时清空一下。");
+    // debug("Ctrl+数字切出tab页不会清空按键，所以重新进入时清空一下。");
     keyPressed = {}; // 清空
   };
   // -------------------------------------------------- shortcut - END
@@ -491,8 +493,6 @@ m: 静音
     // 寻找视频对象 载入播放速度
     observe_and_run(`${eleDict.playerWrapper} video`, (target) => {
       videoObj = find(`${eleDict.playerWrapper} video`); //global
-      videoChannel = getVideoChannel();
-      debug("Video Channel:", videoChannel);
 
       changePlaySpeed(0); // 载入保存的播放速度
 
