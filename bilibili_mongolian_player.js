@@ -41,6 +41,9 @@ shift + left:  上一P
   可以点击原本视频右侧的【开启自动连播】字样开启连播。
   因为大部分需要连播的场景是新关注了UP或者打开了教程等，手动开启应该可以接受。
 
+- 稍后看自动删除播放完的视频
+  删除后会自动播放下一个视频，历史记录可以去独立页面查询。
+  
 ====================
 从定制转变为B站逐渐支持的（也许有人不知道的）功能
 
@@ -56,7 +59,7 @@ m: 静音
 
 // 在播放器获得焦点时，B站默认有一个快解键F可以切换全屏。
 (function () {
-  "use strict";
+  ("use strict");
 
   // -------------------------------------------------- common - START
   const log = (...args) => console.log("[B站上单播放器]", ...args);
@@ -309,6 +312,16 @@ m: 静音
   };
   // -------------------------------------------------- shortcut - END
 
+  // -------------------------------------------------- 稍後再看自動刪除 - START
+  const deleteFinishedVideo = () => {
+    if (document.URL.includes("list/watchlater")) {
+      document
+        .querySelector(".action-list-item-wrap .siglep-active .del-btn")
+        ?.click();
+    }
+  };
+  // -------------------------------------------------- 稍後再看自動刪除 - END
+
   // -------------------------------------------------- 自动连播 - START
   let autoPlayNext = 0; //0=stop; 1=next; -1=prev
 
@@ -445,6 +458,7 @@ m: 静音
         if (autoPlayNext) {
           playNextVideo(autoPlayNext);
         }
+        deleteFinishedVideo();
       });
 
       videoObj.addEventListener("play", () => {
