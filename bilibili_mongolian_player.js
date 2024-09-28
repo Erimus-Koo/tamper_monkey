@@ -8,6 +8,7 @@
 // @match        *://*.bilibili.com/medialist/play/*
 // @match        *://*.bilibili.com/list/*
 // @match        *://*.bilibili.com/festival/*
+// @match        *://t.bilibili.com/*
 // @namespace    https://greasyfork.org/users/46393
 // ==/UserScript==
 
@@ -135,6 +136,38 @@ m: 静音
   }
   // -------------------------------------------------- common - END
 
+  // -------------------------------------------------- observer - START
+  // 观察对象，等待其出现后，运行函数
+  function observe_and_run(
+    selector,
+    runAfterElementFound,
+    autoDisconnect = true
+  ) {
+    const handledElements = new Set();
+
+    // 创建一个观察器实例
+    const observer = new MutationObserver((mutationsList, observer) => {
+      // log("🍎 Changed:", selector, mutationsList);
+      // 如果页面上的元素a已经加载
+      document.querySelectorAll(selector).forEach((target) => {
+        if (autoDisconnect) {
+          observer.disconnect(); // 只处理第一个就停止观察
+        }
+
+        // 只在找到时处理一次
+        if (!handledElements.has(target)) {
+          handledElements.add(target);
+          runAfterElementFound(target); // 运行你的函数
+        }
+      });
+    });
+
+    // 开始观察document，观察子节点和后代节点的添加或者删除
+    const config = { childList: true, attributes: true, subtree: true };
+    observer.observe(document.body, config);
+  }
+  // -------------------------------------------------- observer - END
+
   // -------------------------------------------------- 播放速度 - START
   let isDefaultSpeed = false; //for toggle
   let videoChannel; //视频所在的频道、分类
@@ -145,10 +178,12 @@ m: 静音
   };
 
   const setSpeed = (speed) => {
-    if (videoObj.playbackRate === speed) return;
-    videoObj.playbackRate = speed;
-    const content = `播放速度: ${speed}<br><code style="color:#f90;font-size:.9em">C:加速 V:减速 Z:还原</code>`;
-    notify(content, ".bpx-player-ctrl-playbackrate", 0, -100);
+    if (videoObj) {
+      if (videoObj.playbackRate === speed) return;
+      videoObj.playbackRate = speed;
+      const content = `播放速度: ${speed}<br><code style="color:#f90;font-size:.9em">C:加速 V:减速 Z:还原</code>`;
+      notify(content, ".bpx-player-ctrl-playbackrate", 0, -100);
+    }
   };
 
   // 改变并记录速度
@@ -186,7 +221,7 @@ m: 静音
     }
     localStorage.setItem(LS_videoVolume, volume);
     // 因为B站本身已经有了调音功能 所以只记录 不改变音量 不然会改变多次
-    if (v == 0) {
+    if (v == 0 && videoObj) {
       videoObj.volume = volume;
     }
   };
@@ -312,7 +347,7 @@ m: 静音
   };
   // -------------------------------------------------- shortcut - END
 
-  // -------------------------------------------------- 稍後再看自動刪除 - START
+  // -------------------------------------------------- 稍後再看 - START
   const deleteFinishedVideo = () => {
     if (document.URL.includes("list/watchlater")) {
       document
@@ -320,7 +355,27 @@ m: 静音
         ?.click();
     }
   };
-  // -------------------------------------------------- 稍後再看自動刪除 - END
+  // -------------------------------------------------- 稍後再看 - END
+
+  // -------------------------------------------------- 让对象可聚焦 - START
+  const makeElementFocusable = () => {
+    const focusable = (element) => {
+      element.setAttribute("tabindex", "0");
+      element.setAttribute("role", "button");
+    };
+    let btnDict = {};
+    if (document.URL.includes("t.bilibili.com")) {
+      // 动态页
+      btnDict = {
+        ".bili-dyn-card-video__mark": "稍后播",
+        ".relevant-topic-container__item": "话题",
+      };
+    }
+    for (const selector in btnDict) {
+      observe_and_run(selector, focusable, false);
+    }
+  };
+  // -------------------------------------------------- 让对象可聚焦 - END
 
   // -------------------------------------------------- 自动连播 - START
   let autoPlayNext = 0; //0=stop; 1=next; -1=prev
@@ -421,23 +476,6 @@ m: 静音
   // -------------------------------------------------- 自动连播 - END
 
   // -------------------------------------------------- init - START
-  // 观察对象，等待其出现后，运行函数
-  function observe_and_run(selector, runAfterElementFound) {
-    // 创建一个观察器实例
-    const observer = new MutationObserver((mutationsList, observer) => {
-      // 如果页面上的元素a已经加载
-      let target = document.querySelector(selector);
-      if (target) {
-        observer.disconnect(); // 停止观察
-        runAfterElementFound(target); // 运行你的函数
-      }
-    });
-
-    // 开始观察document，观察子节点和后代节点的添加或者删除
-    const config = { childList: true, attributes: true, subtree: true };
-    observer.observe(document, config);
-  }
-
   // 初始化动作（以前B站跳转油猴不会重载，所以抽象，现在似乎已无必要）
   const init = function () {
     debug("Init:", document.URL);
@@ -475,6 +513,9 @@ m: 静音
 
     // 寻找播放下一个按钮并插入开关
     observe_and_run(eleDict.playNext, addAutoPlayNextBtn);
+
+    // 稍后播按钮
+    makeElementFocusable();
 
     // 添加快捷键监听
     document.addEventListener("keydown", pressKeyDown);
