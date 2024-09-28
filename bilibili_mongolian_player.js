@@ -228,6 +228,41 @@ m: 静音
   };
   // -------------------------------------------------- 音量控制 - END
 
+  // -------------------------------------------------- 稍後再看 - START
+  const deleteFinishedVideo = () => {
+    if (document.URL.includes("list/watchlater")) {
+      document
+        .querySelector(".action-list-item-wrap .siglep-active .del-btn")
+        ?.click();
+    }
+  };
+  // -------------------------------------------------- 稍後再看 - END
+
+  // -------------------------------------------------- 让对象可聚焦 - START
+  const makeElementFocusable = () => {
+    const focusable = (element) => {
+      element.setAttribute("tabindex", "0");
+      element.setAttribute("role", "button");
+    };
+    let btnDict = {};
+    if (document.URL.includes("t.bilibili.com")) {
+      // 动态页
+      btnDict = {
+        ".bili-dyn-card-video__mark": "稍后播",
+        ".relevant-topic-container__item": "话题",
+      };
+    } else if (document.URL.includes("bilibili.com/?")) {
+      // 首页
+      btnDict = {
+        ".bili-watch-later": "稍后播",
+      };
+    }
+    for (const selector in btnDict) {
+      observe_and_run(selector, focusable, false);
+    }
+  };
+  // -------------------------------------------------- 让对象可聚焦 - END
+
   // -------------------------------------------------- shortcut - START
   let keyPressed = {}; //按下的所有键 目的是为了区分 1 和 ctrl+1 这种情况
 
@@ -279,7 +314,7 @@ m: 静音
     i: eleDict.miniPlayer, //画中画
     // 'm': eleDict.mute, //静音(播放器自带 加了会变点两次)
     // 'd': eleDict.danmaku, //弹幕开关
-    s: eleDict.collect, //收藏
+    // s: eleDict.collect, //收藏
   };
   let keyActionsStopPropagation = {
     // 变速（x留给vimium关闭网页）
@@ -289,6 +324,8 @@ m: 静音
     // 跳P
     "ArrowLeft,Shift": () => find_n_click(eleDict.playPrev),
     "ArrowRight,Shift": () => find_n_click(eleDict.playNext),
+    // 从稍后播删除当前播放的视频
+    s: deleteFinishedVideo,
   };
   //进度条跳转
   for (let i of Array(10).keys()) {
@@ -347,41 +384,6 @@ m: 静音
     keyPressed = {}; // 清空
   };
   // -------------------------------------------------- shortcut - END
-
-  // -------------------------------------------------- 稍後再看 - START
-  const deleteFinishedVideo = () => {
-    if (document.URL.includes("list/watchlater")) {
-      document
-        .querySelector(".action-list-item-wrap .siglep-active .del-btn")
-        ?.click();
-    }
-  };
-  // -------------------------------------------------- 稍後再看 - END
-
-  // -------------------------------------------------- 让对象可聚焦 - START
-  const makeElementFocusable = () => {
-    const focusable = (element) => {
-      element.setAttribute("tabindex", "0");
-      element.setAttribute("role", "button");
-    };
-    let btnDict = {};
-    if (document.URL.includes("t.bilibili.com")) {
-      // 动态页
-      btnDict = {
-        ".bili-dyn-card-video__mark": "稍后播",
-        ".relevant-topic-container__item": "话题",
-      };
-    } else if (document.URL.includes("bilibili.com/?")) {
-      // 首页
-      btnDict = {
-        ".bili-watch-later": "稍后播",
-      };
-    }
-    for (const selector in btnDict) {
-      observe_and_run(selector, focusable, false);
-    }
-  };
-  // -------------------------------------------------- 让对象可聚焦 - END
 
   // -------------------------------------------------- 自动连播 - START
   let autoPlayNext = 0; //0=stop; 1=next; -1=prev
