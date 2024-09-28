@@ -9,6 +9,7 @@
 // @match        *://*.bilibili.com/list/*
 // @match        *://*.bilibili.com/festival/*
 // @match        *://t.bilibili.com/*
+// @match        *://www.bilibili.com/?*
 // @namespace    https://greasyfork.org/users/46393
 // ==/UserScript==
 
@@ -369,6 +370,11 @@ m: 静音
       btnDict = {
         ".bili-dyn-card-video__mark": "稍后播",
         ".relevant-topic-container__item": "话题",
+      };
+    } else if (document.URL.includes("bilibili.com/?")) {
+      // 首页
+      btnDict = {
+        ".bili-watch-later": "稍后播",
       };
     }
     for (const selector in btnDict) {
