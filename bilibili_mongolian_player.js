@@ -233,9 +233,24 @@ m: 静音
   // -------------------------------------------------- 稍後再看 - START
   const deleteFinishedVideo = () => {
     if (document.URL.includes("list/watchlater")) {
-      document
-        .querySelector(".action-list-item-wrap .siglep-active .del-btn")
-        ?.click();
+      // 判断当前是列表中的最后一个视频
+      let isLastVideo = false;
+      const videoList = document.querySelectorAll(".actionlist-item-inner");
+      if (videoList.length > 0) {
+        const lastItem = videoList[videoList.length - 1];
+        isLastVideo = lastItem.classList.contains("siglep-active");
+      }
+
+      // 点击删除
+      document.querySelector(".siglep-active .del-btn")?.click();
+
+      // 如果删了最后一个视频 则点击第一个视频
+      if (isLastVideo) videoList[0].click();
+
+      // 删除了列表仅有的一个视频删除后跳转到稍后看列表
+      if (document.querySelectorAll(".action-list-item").length == 1) {
+        window.location.replace("https://www.bilibili.com/watchlater/#/list");
+      }
     }
   };
   // -------------------------------------------------- 稍後再看 - END
