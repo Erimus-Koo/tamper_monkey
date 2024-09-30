@@ -339,7 +339,7 @@ m: 静音
           window.location.href = "https://www.bilibili.com/list/watchlater";
         } else {
           // 没有就等一会儿刷新
-          setInterval(window.location.reload, 60000);
+          setInterval(() => window.location.reload(), 60000);
         }
       }, 5000);
     }
