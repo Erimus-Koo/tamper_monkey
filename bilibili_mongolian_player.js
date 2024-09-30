@@ -348,7 +348,6 @@ m: 静音
 
   // -------------------------------------------------- 让对象可聚焦 - START
   const makeElementFocusable = () => {
-    console.debug(N, "🚨 in make focus");
     const focusable = (element) => {
       element.setAttribute("tabindex", "0");
       element.setAttribute("role", "button");
@@ -370,6 +369,27 @@ m: 静音
     console.debug(N, "🚨 btnDict:", btnDict);
     for (const selector in btnDict) {
       observe_and_run(selector, focusable, false);
+    }
+  };
+
+  const removeFocusable = () => {
+    const a2span = (ele) => {
+      if (ele.tagName.toLowerCase() === "a") {
+        const span = document.createElement("span");
+        span.innerHTML = ele.innerHTML;
+        Array.from(ele.attributes).forEach((attr) => {
+          if (!["href", "target"].includes(attr.name)) {
+            span.setAttribute(attr.name, attr.value);
+          }
+        });
+        // 用 <span> 替换 <a>
+        ele.parentNode.replaceChild(span, ele);
+      }
+    };
+    const prop = getPageProperty();
+    if (prop.name == "home") {
+      // 首页
+      observe_and_run(".bili-video-card__info--tit>a", a2span, false);
     }
   };
   // -------------------------------------------------- 让对象可聚焦 - END
@@ -653,6 +673,7 @@ m: 静音
     // 稍后播按钮
     if (["home", "activity"].includes(prop.name)) {
       makeElementFocusable();
+      removeFocusable();
     }
 
     // 稍后播列表页自动化
