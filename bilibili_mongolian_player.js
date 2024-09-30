@@ -272,22 +272,57 @@ m: 静音
   const deleteFinishedVideo = () => {
     if (document.URL.includes("list/watchlater")) {
       // 判断当前是列表中的最后一个视频
-      let isLastVideo = false;
-      const videoList = document.querySelectorAll(".actionlist-item-inner");
-      if (videoList.length > 0) {
-        const lastItem = videoList[videoList.length - 1];
-        isLastVideo = lastItem.classList.contains("siglep-active");
+      let videoType = "single"; //当前播放的项是单P还是多P
+      const videoList = document.querySelectorAll(".action-list-item-wrap");
+      let currentP = document.querySelector(".siglep-active"); // 单P 列表中的项 还拼错了
+      let multiPList; //多P的列表
+      let currentSubP; //多P的子项
+      if (currentP) {
+        videoType = "single";
+        currentP = currentP.closest(".action-list-item-wrap");
+      } else {
+        currentSubP = document.querySelector(".multip-list-item-active");
+        // 向父级找到当前播放的视频对象 找到含.action-list-item-wrap的
+        if (currentSubP) {
+          videoType = "multi";
+          currentP = currentSubP.closest(".action-list-item-wrap");
+          multiPList = currentP.querySelectorAll(".multip-list-item");
+        }
       }
+      console.debug(`${N} videoType:`, videoType);
+
+      // 判断当前是否是列表最后一个视频
+      const isLastVideo = currentP == videoList[videoList.length - 1];
+      // 判断当前是否是分P的最后一个视频
+      const isLastSubP =
+        videoType == "multi" &&
+        currentSubP == multiPList[multiPList.length - 1];
+      console.debug(`${N} isLastVideo:`, isLastVideo);
 
       // 点击删除
-      document.querySelector(".siglep-active .del-btn")?.click();
+      let deletedLastVideo = false;
+      if (videoType == "single") {
+        currentP.querySelector(".del-btn")?.click();
+        deletedLastVideo = true;
+      } else if (videoType == "multi") {
+        if (isLastSubP) {
+          currentP.querySelector(".del-btn")?.click();
+        } else {
+          currentSubP.nextElementSibling.click();
+        }
+      }
 
-      // 如果删了最后一个视频 则点击第一个视频
-      if (isLastVideo) videoList[0].click();
-
-      // 删除了列表仅有的一个视频删除后跳转到稍后看列表
-      if (document.querySelectorAll(".action-list-item").length == 1) {
-        window.location.href = "https://www.bilibili.com/watchlater/#/list";
+      // 删除了最后一个视频之后
+      if (deletedLastVideo) {
+        if (videoList.length == 1) {
+          // 删除了列表仅有的一个视频删除后跳转到稍后看列表
+          window.location.href = "https://www.bilibili.com/watchlater/#/list";
+        } else {
+          // 如果列表不止一个视频 删了最后一个 点击第一个
+          if (isLastVideo) {
+            videoList[0].querySelector(".actionlist-item-inner")?.click();
+          }
+        }
       }
     }
   };
@@ -297,18 +332,13 @@ m: 静音
   const autoRefreshWatchLaterList = () => {
     // 如果稍后播列表内无视频，则自动刷新。如果有则开始播放。
     if (getPageProperty().name == "watchlater-list") {
-      console.log(
-        `${N} ✅ Enter watch later list`,
-        document.querySelector(".av-item")
-      );
-      // 视频列表是后加载的 进入页面直接获取不到 所以等5秒s
+      // 视频列表是后加载的 进入页面直接获取不到 所以等5秒
       setInterval(() => {
         if (document.querySelector(".av-item")) {
           // 如果有视频则前往播放页
           window.location.href = "https://www.bilibili.com/list/watchlater";
         } else {
           // 没有就等一会儿刷新
-          console.log(`${N} ✅ No 📹 in watch later list, wait for retry...`);
           setInterval(window.location.reload, 60000);
         }
       }, 5000);
