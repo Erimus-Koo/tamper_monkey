@@ -22,46 +22,75 @@ z: 播放恢复原速
 
 (function () {
   ("use strict");
+
   const blacklist = ["bilibili"];
   let videoObj = null; //当前正在播放的视频（含音频）
   let videoObjAll = []; //所有播放器组
   let fullScreen = false; //当前的全屏状态
 
   // -------------------------------------------------- common - START
-  const log = (...args) => console.log("[视频播放器增强]", ...args);
-  const debug = (...args) => console.debug("[视频播放器增强]", ...args);
-  log("油猴脚本开始");
+  const N = `[视频播放器增强] `;
+  console.log(N);
 
   const find = (selector) => {
     return document.querySelector(selector);
   };
   const find_n_click = (selector) => {
-    log(`cmd: document.querySelector('${selector}').click()`);
+    console.log(`${N}cmd: document.querySelector('${selector}').click()`);
     const target = document.querySelector(selector);
     target?.click();
   };
 
   // 信息提示窗
   let notifyDelay;
-  function notify(content, delay = 3) {
+  function notify(
+    content, //innerHTML
+    originEle, //定位对象 消息出现的位置 一般是视频对象
+    delay = 3, //消息停留时间
+    offsetX = 20,
+    offsetY = 20
+  ) {
+    if (!originEle) originEle = document.body;
+
     // 检查已有的通知容器
     const notiName = "media-player-shortcut";
-    let notificationElement = document.querySelector(
+    let notificationElement = originEle.querySelector(
       `.notification[data-target="${notiName}"]`
     );
     if (notificationElement) {
-      debug("⚠️ notify existed");
+      // console.debug("⚠️ notify existed");
       clearTimeout(notifyDelay);
     } else {
       // create notification
       notificationElement = document.createElement("div");
       notificationElement.className = "notification";
       notificationElement.setAttribute("data-target", notiName);
-      document.body.appendChild(notificationElement);
+      // 如果是video或audio就加到父级 否则加到指定originEle
+      const container =
+        originEle.tagName.toLowerCase() === "video" ||
+        originEle.tagName.toLowerCase() === "audio"
+          ? originEle.parentElement
+          : originEle;
+      container.appendChild(notificationElement);
     }
-    debug("Notification ele:", notificationElement);
-    notificationElement.innerHTML = content; //更新消息
-    debug("update notify conent");
+
+    // Youtube 需要trustedType才能插入innerHTML
+    const policy = trustedTypes.createPolicy("myPolicy", {
+      createHTML: (string) => string,
+    });
+
+    // console.debug("Notification ele:", notificationElement);
+    // notificationElement.innerHTML = content; //更新消息
+    notificationElement.innerHTML = policy.createHTML(content);
+
+    // 消息出现的定位点
+    // const rect = originEle?.getBoundingClientRect();
+    // console.debug(`${N}Notify origin: left=${rect?.left} top=${rect?.top}`);
+    // notificationElement.style.left = `${rect ? rect.left + offsetX : 20}px`;
+    // notificationElement.style.top = `${rect ? rect.top + offsetY : 20}px`;
+    notificationElement.style.left = `${offsetX}px`;
+    notificationElement.style.top = `${offsetY}px`;
+    console.debug(`${N}style:`, notificationElement.style);
 
     // 添加样式
     const existingStyle = document.querySelector(
@@ -70,8 +99,7 @@ z: 播放恢复原速
     if (!existingStyle) {
       const style = document.createElement("style");
       style.textContent = `.${notificationElement.className}{
-      position:fixed;z-index:999999;
-      left:20px;bottom:20px;
+      position:absolute;z-index:999999;
       font-size:16px;color:#fff;background:#000c;
       padding:.5em 1em;border-radius:.5em;
     }`;
@@ -96,11 +124,13 @@ z: 播放恢复原速
     if (videoObj instanceof HTMLVideoElement) {
       // video: 在较小的视频 如GIF 表情包等场景下 不提示
       if (videoObj.offsetWidth > 200 && videoObj.offsetHeight > 200) {
+        notify(content, videoObj);
+      } else {
         notify(content);
       }
     } else {
       // audio
-      notify(content);
+      notify(content, videoObj);
     }
   };
 
@@ -120,7 +150,7 @@ z: 播放恢复原速
       // v小于1时调速
       playSpeed = Math.max(playSpeed + v, 0);
       playSpeed = Number(playSpeed.toFixed(2));
-      debug(`playSpeed(${v}): ${playSpeed}`);
+      console.debug(`${N}playSpeed(${v}): ${playSpeed}`);
       localStorage.setItem(LS_playSpeed, playSpeed);
       setSpeed(playSpeed);
     }
@@ -134,7 +164,7 @@ z: 播放恢复原速
     volume = Math.min(Math.max(volume + v, 0), 1);
     volume = Number(volume.toFixed(2));
     if (v != 0) {
-      debug(`volume(${v}): ${volume}`);
+      console.log(`${N}volume(${v}): ${volume}`);
     }
     localStorage.setItem(LS_videoVolume, volume);
     // 因为B站本身已经有了调音功能 所以只记录 不改变音量 不然会改变多次
@@ -195,7 +225,7 @@ z: 播放恢复原速
     keyActionsStopPropagation[i.toString()] = () =>
       (videoObj.currentTime = (videoObj.duration / 10) * i);
   }
-  debug("keyActionsStopPropagation:", keyActionsStopPropagation);
+  // console.debug("keyActionsStopPropagation:", keyActionsStopPropagation);
   // 以下是不需要阻止事件传播的按键
   // 比如音量调整，阻止了会失去原本的提示浮窗
   const keyActions = {
@@ -205,7 +235,7 @@ z: 播放恢复原速
   };
 
   const pressKeyDown = function (e) {
-    debug("keyDown e:", e);
+    // console.debug("keyDown e:", e);
 
     // 如果光标在输入框里，快捷键不生效
     if (
@@ -221,34 +251,54 @@ z: 播放恢复原速
 
     // 判断组合键
     keyPressed[e.key] = true;
-    debug("keyDown keyPressed:", keyPressed);
+    // console.debug("keyDown keyPressed:", keyPressed);
     const keys = Object.keys(keyPressed).sort().toString();
-    debug("keyDown keys:", keys); //如果多按键会变成"a,b"
+    console.debug(`${N}keyDown keys:`, keys); //如果多按键会变成"a,b"
 
     // 设置快捷键
     if (keys in shortcutDict) {
       //字典里定义的直接搜索并点击的快捷键
+      console.log(`${N}keys in dict`);
       shortcutDict[keys]();
       e.stopPropagation();
     } else if (keys in keyActionsStopPropagation) {
       //运行自定义函数的快捷键
+      console.log(`${N}keys action with stop propagation`);
       keyActionsStopPropagation[keys]();
       e.stopPropagation();
     } else if (keys in keyActions) {
       //不需要阻止传递的快捷键
+      console.log(`${N}keys action without stop`);
       keyActions[keys]();
+    } else {
+      console.log(`${N}keys not in shortcuts, passed.`);
+
+      // 在 iframe 中的话发送消息给父窗口
+      if (window.self !== window.top) {
+        const data = {
+          type: "keyDown",
+          event: {
+            key: e.key,
+            target: { tagName: e.target.tagName, type: e.target.type },
+          },
+        };
+        window.top.postMessage(data, "*");
+      }
     }
   };
 
   const pressKeyUp = function (e) {
-    debug("keyUp e:", e);
+    // console.debug("keyUp e:", e);
     delete keyPressed[e.key];
-    debug("keyUp keyPressed:", keyPressed);
+    // console.debug("keyUp keyPressed:", keyPressed);
+    if (window.self !== window.top) {
+      window.top.postMessage({ type: "keyUp" }, "*");
+    }
   };
 
   window.onfocus = function () {
     // 当窗口获得焦点时
-    debug("Ctrl+数字切出tab页不会清空按键，所以重新进入时清空一下。");
+    // console.debug("Ctrl+数字切出tab页不会清空按键，所以重新进入时清空一下。");
     keyPressed = {}; // 清空
   };
   // -------------------------------------------------- shortcut - END
@@ -264,6 +314,13 @@ z: 播放恢复原速
         videoObjAll.push(media);
         // console.debug("📷 Find new video element:", media);
         media.addEventListener("play", videoStartPlay);
+        media.addEventListener("ended", () => {
+          // 在 iframe 中的话发送消息给父窗口
+          if (window.self !== window.top) {
+            const data = { type: "videoEnded" };
+            window.top.postMessage(data, "*");
+          }
+        });
       }
     });
   };
@@ -271,7 +328,7 @@ z: 播放恢复原速
   const videoStartPlay = (e) => {
     // 更新当前正在播放的视频元素
     videoObj = e.target;
-    console.debug("Current playing videoObj:", videoObj);
+    console.debug(`${N}Current playing videoObj:`, videoObj);
 
     // 读取播放器配置
     changePlaySpeed();
@@ -280,7 +337,7 @@ z: 播放恢复原速
 
   // 初始化动作（以前B站跳转油猴不会重载，所以抽象，现在似乎已无必要）
   const init = function () {
-    debug("Init:", document.URL);
+    // console.debug("Init:", document.URL);
 
     // 跳过黑名单的域名
     if (blacklist.some((kw) => window.location.href.includes(kw))) return;
@@ -293,8 +350,8 @@ z: 播放恢复原速
     observer.observe(document.body, { childList: true, subtree: true });
 
     // 添加快捷键监听
-    document.addEventListener("keydown", pressKeyDown);
-    document.addEventListener("keyup", pressKeyUp);
+    document.addEventListener("keydown", (e) => pressKeyDown(e));
+    document.addEventListener("keyup", (e) => pressKeyUp(e));
 
     // 初次载入时可能会还没来得及监听 所以先遍历一次
     document.querySelectorAll("video").forEach((video) => {
