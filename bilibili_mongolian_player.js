@@ -4,6 +4,7 @@
 // @description  B站播放器优化。添加了一些 youtube 和 potplayer 的快捷键。修复了多P连播，增加了自动播放记忆位置等功能。
 // @author       Erimus
 // @namespace    https://greasyfork.org/users/46393
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=bilibili.com
 
 // @match        *://*.bilibili.com/video/*
 // @match        *://*.bilibili.com/bangumi/play/*
@@ -66,10 +67,8 @@ m: 静音
   ("use strict");
 
   // -------------------------------------------------- common - START
-  const N = "[B站上单播放器]";
-  const log = (...args) => console.log(N, ...args);
-  const debug = (...args) => console.debug(N, ...args);
-  console.log(`${N} 油猴脚本开始`);
+  const N = "[B站上单播放器] ";
+  console.log(`${N}油猴脚本开始`);
 
   let videoObj; //播放器元素 全局
 
@@ -97,7 +96,7 @@ m: 静音
       `.notification[data-target="${originSelector}"]`
     );
     if (notificationElement) {
-      console.debug(`${N} notify existed`);
+      console.debug(`${N}notify existed`);
       clearTimeout(notifyDelay);
     } else {
       // create notification
@@ -113,10 +112,10 @@ m: 静音
     // 消息出现的定位点
     const origin = document.querySelector(originSelector);
     const rect = origin?.getBoundingClientRect();
-    console.debug(`${N} Notify origin: left=${rect?.left} top=${rect?.top}`);
+    console.debug(`${N}Notify origin: left=${rect?.left} top=${rect?.top}`);
     notificationElement.style.left = `${rect ? rect.left + offsetX : 20}px`;
     notificationElement.style.top = `${rect ? rect.top + offsetY : 20}px`;
-    console.debug(`${N} style:`, notificationElement.style);
+    console.debug(`${N}style:`, notificationElement.style);
 
     // 添加样式
     const existingStyle = document.querySelector(
@@ -186,21 +185,24 @@ m: 静音
       festival: "festival",
     };
     for (let path in pathDict) {
-      if (window.location.href.includes(`www.bilibili.com/${path}`)) {
-        prop.type = "player";
+      if (document.URL.includes(`www.bilibili.com/${path}`)) {
+        prop.type = "player"; //含播放器的页面
         prop.name = pathDict[path];
       }
     }
 
     // 首页
-    if (window.location.href.includes(`www.bilibili.com/?`)) {
+    if (document.URL.includes(`www.bilibili.com/?`)) {
       prop.name = "home";
     }
-    if (window.location.href.includes(`t.bilibili.com`)) {
+    if (document.URL.includes(`t.bilibili.com`)) {
       prop.name = "activity";
     }
-    if (window.location.href.includes(`www.bilibili.com/watchlater`)) {
+    if (document.URL.includes(`www.bilibili.com/watchlater`)) {
       prop.name = "watchlater-list";
+    }
+    if (document.URL.includes(`space.bilibili.com`)) {
+      prop.name = "space";
     }
     console.debug(N, "🚨 prop:", prop);
     return prop;
@@ -244,7 +246,7 @@ m: 静音
       // v小于1时调速
       playSpeed = Math.max(playSpeed + v, 0);
       playSpeed = Number(playSpeed.toFixed(2));
-      console.debug(`${N} playSpeed(${v}): ${playSpeed}`);
+      console.debug(`${N}playSpeed(${v}): ${playSpeed}`);
       localStorage.setItem(LS_playSpeed, playSpeed);
       setSpeed(playSpeed);
     }
@@ -258,7 +260,7 @@ m: 静音
     volume = Math.min(Math.max(volume + v, 0), 1);
     volume = Number(volume.toFixed(2));
     if (v != 0) {
-      console.debug(`${N} volume(${v}): ${volume}`);
+      console.debug(`${N}volume(${v}): ${volume}`);
     }
     localStorage.setItem(LS_videoVolume, volume);
     // 因为B站本身已经有了调音功能 所以只记录 不改变音量 不然会改变多次
@@ -289,7 +291,7 @@ m: 静音
           multiPList = currentP.querySelectorAll(".multip-list-item");
         }
       }
-      console.debug(`${N} videoType:`, videoType);
+      console.debug(`${N}videoType:`, videoType);
 
       // 判断当前是否是列表最后一个视频
       const isLastVideo = currentP == videoList[videoList.length - 1];
@@ -297,7 +299,7 @@ m: 静音
       const isLastSubP =
         videoType == "multi" &&
         currentSubP == multiPList[multiPList.length - 1];
-      console.debug(`${N} isLastVideo:`, isLastVideo);
+      console.debug(`${N}isLastVideo:`, isLastVideo);
 
       // 点击删除
       let deletedLastVideo = false;
@@ -347,27 +349,36 @@ m: 静音
   // -------------------------------------------------- 稍後再看列表页 - END
 
   // -------------------------------------------------- 让对象可聚焦 - START
+  // 这个部分很多需要配合stylus修改display来实现，不然vimnium会找不到
   const makeElementFocusable = () => {
     const focusable = (element) => {
       element.setAttribute("tabindex", "0");
       element.setAttribute("role", "button");
+      element.style.display = "inline-flex";
     };
-    let btnDict = {};
+    let btnList = [];
     const prop = getPageProperty();
-    if (prop.name == "activity") {
-      // 动态页
-      btnDict = {
-        ".bili-dyn-card-video__mark": "稍后播",
-        ".relevant-topic-container__item": "话题",
-      };
-    } else if (prop.name == "home") {
-      // 首页
-      btnDict = {
-        ".bili-watch-later": "稍后播",
-      };
+    if (prop.type == "player") {
+      btnList = btnList.concat(".bpx-player-follow"); // 关注按钮
     }
-    console.debug(N, "🚨 btnDict:", btnDict);
-    for (const selector in btnDict) {
+    if (prop.name == "home") {
+      // 首页 稍后播
+      btnList = btnList.concat(".bili-watch-later");
+    } else if (prop.name == "activity") {
+      // 动态页
+      btnList = btnList.concat(
+        ".bili-dyn-card-video__mark", //稍后播
+        ".relevant-topic-container__item" //话题
+      );
+    } else if (prop.name == "watchlater") {
+      // 稍后再看播放页 右侧播放列表中的视频项
+      btnList = btnList.concat(".actionlist-item-inner");
+    } else if (prop.name == "space") {
+      // 个人页 视频列表
+      btnList = btnList.concat(".i-watchlater");
+    }
+    console.debug(N, "🚨 btnList:", btnList);
+    for (const selector of btnList) {
       observe_and_run(selector, focusable, false);
     }
   };
@@ -412,7 +423,7 @@ m: 静音
   };
 
   // 番剧模式下 播放器元素名称不同
-  if (document.URL.includes("bangumi/play")) {
+  if (window.location.href.includes("bangumi/play")) {
     eleDict.fullscreen = ".bpx-player-ctrl-full"; //全屏
     eleDict.webFullscreen = ".bpx-player-ctrl-web"; //网页全屏
     eleDict.theaterMode = ".bpx-player-ctrl-wide"; //宽屏
@@ -458,11 +469,11 @@ m: 静音
     ArrowDown: () => changeVideoVolume(-0.1),
   };
   const pressKeyDown = function (e) {
-    console.debug(`${N} keyDown e:`, e);
+    console.debug(`${N}keyDown e:`, e);
     keyPressed[e.key] = true;
-    console.debug(`${N} keyDown keyPressed:`, keyPressed);
+    console.debug(`${N}keyDown keyPressed:`, keyPressed);
     const keys = Object.keys(keyPressed).sort().toString();
-    console.debug(`${N} keyDown keys:`, keys); //如果多按键会变成"a,b"
+    console.debug(`${N}keyDown keys:`, keys); //如果多按键会变成"a,b"
 
     // 如果光标在输入框里，快捷键不生效
     if (
@@ -491,14 +502,14 @@ m: 静音
   };
 
   const pressKeyUp = function (e) {
-    console.debug(`${N} keyUp e:`, e);
+    console.debug(`${N}keyUp e:`, e);
     delete keyPressed[e.key];
-    console.debug(`${N} keyUp keyPressed:`, keyPressed);
+    console.debug(`${N}keyUp keyPressed:`, keyPressed);
   };
 
   window.onfocus = function () {
     // 当窗口获得焦点时
-    // console.debug(`${N} Ctrl+数字切出tab页不会清空按键，所以重新进入时清空一下。`);
+    // console.debug(`${N}Ctrl+数字切出tab页不会清空按键，所以重新进入时清空一下。`);
     keyPressed = {}; // 清空
   };
   // -------------------------------------------------- shortcut - END
@@ -577,7 +588,7 @@ m: 静音
     nextBtn.parentNode.insertBefore(newBtn, nextBtn); //insert btn
 
     updateBtnStatus();
-    console.debug(`${N} 自动连播:`, autoPlayNext);
+    console.debug(`${N}自动连播:`, autoPlayNext);
   };
 
   function playNextVideo(mode) {
@@ -596,7 +607,7 @@ m: 静音
       const lastItemWrap = itemWraps[mode == 1 ? itemWraps.length - 1 : 0];
       // 检查最后一个元素是否含有 siglep-active 类
       if (lastItemWrap.querySelector(".siglep-active")) {
-        debug(`This is the last video`);
+        console.debug(`${N}This is the last video`);
         return;
       }
     }
@@ -608,7 +619,7 @@ m: 静音
   // -------------------------------------------------- init - START
   // 初始化动作（以前B站跳转油猴不会重载，所以抽象，现在似乎已无必要）
   const init = function () {
-    debug("Init:", document.URL);
+    console.debug(`${N}Init:`, window.location.href);
 
     const prop = getPageProperty();
 
@@ -617,7 +628,7 @@ m: 静音
       if (window.location.href.includes("watchlater")) {
         // 判断当前页面 如果是稍后播 则自动开启连播
         autoPlayNext = 1;
-        btnStatusList = ["开启连播", "正序连播中"];
+        btnStatusList = ["开启连播", "连播中"];
         updateBtnStatus();
         console.log(N, "✅ autoPlayNext:", autoPlayNext);
       }
@@ -632,7 +643,7 @@ m: 静音
         // B站自动连播现在会自动播放推荐视频，包括播放列表以外的内容，
         // 单P视频也会连播，此处应有蒙古上单名言。
         videoObj.addEventListener("ended", () => {
-          debug("Video ended, try play next...");
+          console.debug(`${N}Video ended, try play next...`);
           if (autoPlayNext) {
             if (prop.name == "watchlater") {
               deleteFinishedVideo();
@@ -643,7 +654,7 @@ m: 静音
         });
 
         videoObj.addEventListener("play", () => {
-          console.debug(`${N} Video start to play ▶`);
+          console.debug(`${N}Video start to play ▶`);
           changePlaySpeed();
           changeVideoVolume();
         });
@@ -671,8 +682,8 @@ m: 静音
     } // ------------------------------ isPlayerPage - END
 
     // 稍后播按钮
+    makeElementFocusable();
     if (["home", "activity"].includes(prop.name)) {
-      makeElementFocusable();
       removeFocusable();
     }
 
