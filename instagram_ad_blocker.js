@@ -9,6 +9,10 @@
 // @match        *://www.instagram.com*
 // ==/UserScript==
 
+// @require      https://raw.githubusercontent.com/Erimus-Koo/tamper_monkey/master/instagram_ad_blocker.js?v=1026
+// @require      file://D:\OneDrive\05ProgramProject\tamper_monkey\instagram_ad_blocker.js
+// @require      file:///Users/erimus/OneDrive/05ProgramProject/tamper_monkey/instagram_ad_blocker.js
+
 (function () {
   ("use strict");
 
@@ -68,7 +72,10 @@
     for (let span of ele.querySelectorAll("span")) {
       for (let kw of keywordList) {
         if (span.textContent.includes(kw)) {
-          ele.style.display = "none";
+          console.log(`${N}FOUND AD 💥💥💥`);
+          ele.classList.add("spam");
+          ele.style.height = 0;
+          ele.style.overflow = "hidden";
           return;
         }
       }
