@@ -4,6 +4,7 @@
 // @description  Remove AD in instagram feed
 // @author       Erimus
 // @namespace    https://greasyfork.org/users/46393
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=instagram.com
 
 // @match        *://www.instagram.com*
 // ==/UserScript==
