@@ -21,26 +21,40 @@
   function observe_and_run(
     selector,
     runAfterElementFound,
-    autoDisconnect = true
+    kwargs = {},
+    autoDisconnect = false
   ) {
     const handledElements = new Set();
 
     // 创建一个观察器实例
     const observer = new MutationObserver((mutationsList, observer) => {
-      // console.log("🍎 Changed:", selector, mutationsList);
-      // 如果页面上的元素a已经加载
-      document.querySelectorAll(selector).forEach((target) => {
-        if (autoDisconnect) {
-          observer.disconnect(); // 只处理第一个就停止观察
-        }
-
-        // 只在找到时处理一次
-        if (!handledElements.has(target)) {
-          handledElements.add(target);
-          runAfterElementFound(target); // 运行你的函数
-        }
+      mutationsList.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === 1) {
+            // 确保是元素节点
+            if (node.matches(selector)) {
+              // console.debug(`${N}🚨 node:`, node);
+              processElement(node, observer);
+            }
+            // 也检查子元素
+            node.querySelectorAll(selector).forEach((target) => {
+              // console.debug(`${N}🚨 target:`, target);
+              processElement(target, observer);
+            });
+          }
+        });
       });
     });
+
+    function processElement(target, observer) {
+      if (!handledElements.has(target)) {
+        handledElements.add(target);
+        runAfterElementFound(target, kwargs);
+        if (autoDisconnect) {
+          observer.disconnect();
+        }
+      }
+    }
 
     // 开始观察document，观察子节点和后代节点的添加或者删除
     const config = { childList: true, attributes: true, subtree: true };
