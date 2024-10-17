@@ -536,7 +536,9 @@ padding:.5em 1em;position:fixed;left:.5em;bottom:.5em;background:red;color:white
   ) => {
     // console.debug(`${N}🚨 ele:`, ele);
     // console.debug(`${N}🚨 kwargs:`, kwargs);
-    const title = ele?.querySelector(kwargs.title)?.textContent;
+    const title = ele
+      ?.querySelector(kwargs.title)
+      ?.textContent.replaceAll(" ", "");
     const author = ele?.querySelector(kwargs.author)?.textContent;
     const duration = kwargs.duration
       ? ele?.querySelector(kwargs.duration)?.textContent
@@ -552,7 +554,7 @@ padding:.5em 1em;position:fixed;left:.5em;bottom:.5em;background:red;color:white
 
   GM_addStyle(`
 *[block-display="fade"]{opacity:.25;transform:scale(.9);}
-*[block-display="hide"]{opacity:.25;transform:scale(.5);}
+*[block-display="hide"]{display:none;}
 `);
   // -------------------------------------------------- 屏蔽 - END
 
@@ -634,7 +636,7 @@ padding:.5em 1em;position:fixed;left:.5em;bottom:.5em;background:red;color:white
         author: ".name",
         duration: ".duration",
       });
-    } else if (url.includes("www.bilibili.com/?")) {
+    } else if (url.match(/www\.bilibili\.com\/?($|\?)/)) {
       // 首页
       vList = vList.concat({
         ele: ".bili-video-card,.feed-card",

@@ -175,6 +175,7 @@ m: 静音
   const getPageProperty = () => {
     // 获取页面名称 用于分类等
     prop = {};
+    const url = document.URL;
 
     // 视频播放器页面
     const pathDict = {
@@ -185,23 +186,23 @@ m: 静音
       festival: "festival",
     };
     for (let path in pathDict) {
-      if (document.URL.includes(`www.bilibili.com/${path}`)) {
+      if (url.includes(`www.bilibili.com/${path}`)) {
         prop.type = "player"; //含播放器的页面
         prop.name = pathDict[path];
       }
     }
 
     // 首页
-    if (document.URL.includes(`www.bilibili.com/?`)) {
+    if (url.match(/www\.bilibili\.com\/?($|\?)/)) {
       prop.name = "home";
     }
-    if (document.URL.includes(`t.bilibili.com`)) {
+    if (url.includes(`t.bilibili.com`)) {
       prop.name = "activity";
     }
-    if (document.URL.includes(`www.bilibili.com/watchlater`)) {
+    if (url.includes(`www.bilibili.com/watchlater`)) {
       prop.name = "watchlater-list";
     }
-    if (document.URL.includes(`space.bilibili.com`)) {
+    if (url.includes(`space.bilibili.com`)) {
       prop.name = "space";
     }
     console.debug(N, "🚨 prop:", prop);
