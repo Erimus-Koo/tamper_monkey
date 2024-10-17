@@ -67,12 +67,12 @@
   // -------------------------------------------------- Observer - END
 
   // -------------------------------------------------- Find & Block - START
-  const keywordList = ["赞助内容"];
+  const keywordList = ["赞助内容", "Sponsored"].map((e) => e.toLowerCase());
   const find_and_block_ad = (ele) => {
     for (let span of ele.querySelectorAll("span")) {
       for (let kw of keywordList) {
-        if (span.textContent.includes(kw)) {
-          console.log(`${N}FOUND AD 💥💥💥`);
+        if (span.textContent.toLowerCase().includes(kw)) {
+          console.log(`${N}FOUND AD 💥💥💥 [${span.textContent}]`);
           ele.classList.add("spam");
           ele.style.height = 0;
           ele.style.overflow = "hidden";
