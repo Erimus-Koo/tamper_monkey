@@ -1,10 +1,13 @@
 // ==UserScript==
-// @name         Shanghai Library meta to md
+// @name         Shanghai Library Toolkit
 // @version      0.1.0
-// @description  Convert Shanghai Library's Book Meta Data to Markdown Front Matter
+// @description  Convert Shanghai Library's Book Meta Data to Markdown Front Matter. Filter rent available libraries.
 // @author       Erimus
-// @match        *://*.library.sh.cn/Record/*
 // @namespace    https://greasyfork.org/users/46393
+// @grant        GM_xmlhttpRequest
+// @grant        GM_addStyle
+
+// @match        *://*.library.sh.cn/Record/*
 // ==/UserScript==
 
 /* 功能说明
@@ -15,14 +18,14 @@
   ("use strict");
 
   // -------------------------------------------------- common - START
-  const log = (...args) => console.log("[上图信息提取]", ...args);
-  const debug = (...args) => console.debug("[上图信息提取]", ...args);
-  log("油猴脚本开始");
+  N = "[📖] ";
+  console.log(`${N}油猴脚本开始`);
 
   const list2yaml = (arr) => arr.map((c) => `  - ${c}`).join(`\n`);
 
   // -------------------------------------------------- common - END
 
+  // -------------------------------------------------- Copy Meta - START
   // 在当前页面添加复制信息按钮，点击即把信息复制到剪切板。
   const button = document.createElement("button");
   button.innerText = "Copy Meta";
@@ -43,11 +46,11 @@
     // 读取书名
     let title = document.querySelector(".media-body>h3").textContent.trim();
     title = title.replace(/[\s\/]+$/, ""); //remove right side useless letters
-    debug("title:", title);
+    console.debug(`${N}title:`, title);
 
     // 获取当前页面的网址
     const url = window.location.href.split("?")[0];
-    debug("url:", url);
+    console.debug(`${N}url:`, url);
 
     // 读取作者
     const authorList = Array.from(
@@ -55,7 +58,7 @@
         'span.author-data[property="author"],span.author-data[property="creator"]'
       )
     )?.map((a) => a.querySelector("a").textContent.trim());
-    debug("authorList:", authorList);
+    console.debug(`${N}authorList:`, authorList);
 
     // 读取译者等
     let contributorDict = {};
@@ -77,7 +80,7 @@
         contributorDict[role].push(name);
       }
     });
-    debug("contributorDict:", contributorDict);
+    console.debug(`${N}contributorDict:`, contributorDict);
     let contributorMeta = "";
     for (role in contributorDict) {
       contributorMeta += `${role}:\n`;
@@ -91,7 +94,7 @@
       const td = row.querySelector("td").textContent.trim();
       metaDict[th] = td;
     });
-    debug("metaDict:", metaDict, metaDict["ISBN"]);
+    console.debug(`${N}metaDict:`, metaDict, metaDict["ISBN"]);
 
     // 读取封面
     let cover =
@@ -123,4 +126,78 @@ ${contributorMeta}
   };
 
   button.addEventListener("click", meta2md);
+  // -------------------------------------------------- Copy Meta - END
+
+  // -------------------------------------------------- Observer - START
+  // 观察对象，等待其出现后，运行函数
+  function observe_and_run(
+    selector,
+    runAfterElementFound,
+    autoDisconnect = true
+  ) {
+    console.log(`Start Observing`);
+    const handledElements = new Set();
+
+    const observer = new MutationObserver(() => {
+      let found = false;
+
+      document.querySelectorAll(selector).forEach((target) => {
+        if (!handledElements.has(target)) {
+          handledElements.add(target);
+          runAfterElementFound(target);
+          found = true;
+        }
+      });
+
+      // 处理完第一个匹配元素后断开观察
+      if (autoDisconnect && found) {
+        observer.disconnect();
+      }
+    });
+
+    const config = { childList: true, attributes: true, subtree: true };
+    observer.observe(document.body, config);
+  }
+  // -------------------------------------------------- Observer - END
+
+  // -------------------------------------------------- Get Available - START
+  // 查看全部馆藏
+  const getAllBtn = "#locationOptions~p>button.btn-primary";
+  const showAllAvailable = (btn) => {
+    btn.click();
+  };
+  observe_and_run(getAllBtn, showAllAvailable);
+
+  const libSelector = ".holdings-tab .branch";
+  const hideUnavailable = (lib) => {
+    {
+      let libAvailable = false;
+      for (let loc of lib.querySelectorAll(".location-item")) {
+        let locAvailable = false;
+        loc.querySelectorAll("tr").forEach((tr, i) => {
+          //skip table header
+          if (i != 0) {
+            const td = tr.querySelectorAll("td");
+            if (
+              td[2].textContent.includes("外借") &&
+              td[3].textContent.includes("已归还")
+            ) {
+              libAvailable = true;
+              locAvailable = true;
+            } else {
+              tr.setAttribute("available", false);
+            }
+          }
+        });
+        if (!locAvailable) loc.setAttribute("available", false);
+      }
+      if (!libAvailable) lib.setAttribute("available", false);
+    }
+  };
+  observe_and_run(libSelector, hideUnavailable, false);
+
+  GM_addStyle(`
+*[available="false"]{display:none;}
+    `);
+  // -------------------------------------------------- Get Available - END
 })();
