@@ -182,6 +182,7 @@ m: 静音
       video: "video",
       bangumi: "video",
       medialist: "unknown",
+      list: "playAllVideo", //of certain author
       "list/watchlater": "watchlater",
       festival: "festival",
     };
