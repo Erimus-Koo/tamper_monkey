@@ -11,9 +11,11 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
 
+// @match        *://www.bilibili.com
 // @match        *://www.bilibili.com/?*
 // @match        *://t.bilibili.com/*
 // @match        *://www.bilibili.com/list/*
+// @match        *://www.bilibili.com/video/*
 // ==/UserScript==
 
 /* 功能说明
