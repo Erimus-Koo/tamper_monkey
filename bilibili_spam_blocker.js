@@ -366,8 +366,6 @@ padding:.5em 1em;position:fixed;left:.5em;bottom:.5em;background:red;color:white
 
   // 提交数据
   const saveAndCloseModal = async (e) => {
-    e.stopPropagation();
-
     saveGistConfig(); //提交Gist配置
 
     const newTitleRule = modal.querySelector("#title-rules").value;
@@ -572,8 +570,8 @@ padding:.5em 1em;position:fixed;left:.5em;bottom:.5em;background:red;color:white
   let keyActions = {
     // 变速（x留给vimium关闭网页）
     "Control,b": toggleConfigModal,
-    "Control,s": saveAndCloseModal,
-    Escape: closeWithoutSave,
+    "Control,q": saveAndCloseModal,
+    Escape: saveAndCloseModal,
   };
 
   const pressKeyDown = function (e) {
