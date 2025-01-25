@@ -338,7 +338,10 @@ m: 静音
     if (getPageProperty().name == "watchlater-list") {
       // 视频列表是后加载的 进入页面直接获取不到 所以等5秒
       setInterval(() => {
-        if (document.querySelector(".av-item")) {
+        if (
+          document.querySelector(".av-item") || //2024
+          document.querySelector(".video-card") //2025
+        ) {
           // 如果有视频则前往播放页
           window.location.href = "https://www.bilibili.com/list/watchlater";
         } else {
