@@ -13,9 +13,13 @@
 
   /**
    * Shortcut configuration:
-   * - macOS: Ctrl+C copies title and URL; Ctrl+Y copies URL only
-   * - Windows: Alt+C copies title and URL; Alt+Y copies URL only
-   * - Ctrl/Alt+C: Toggles between plain text format and Markdown format.
+   * - macOS: Prefix is Ctrl
+   * - Windows: Prefix is Alt
+   *
+   * - Prefix+C copies title and URL;
+   *   (Toggles between plain text format and Markdown format.)
+   * - Prefix+M copies title and URL in Markdown format
+   * - Prefix+Y copies URL only
    */
 
   let isMD = false; // 切换复制模式的标记
@@ -92,6 +96,10 @@
       } else if (prefix && e.code === "KeyY") {
         e.preventDefault(); // Prevent default browser behavior
         copyUrlOnly(); // Copy URL only
+      } else if (prefix && e.code === "KeyM") {
+        e.preventDefault(); // Prevent default browser behavior
+        isMD = true;
+        copyTitleAndUrl(); // Copy Markdown
       }
     });
   }
