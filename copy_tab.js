@@ -49,8 +49,35 @@
   }
 
   // 复制文本到剪贴板
+  function fallbackCopyToClipboard(content) {
+    const textarea = document.createElement("textarea");
+    textarea.value = content;
+    textarea.style.position = "fixed"; // 防止页面滚动
+    textarea.style.opacity = "0"; // 保持不可见，避免干扰用户操作
+    document.body.appendChild(textarea);
+
+    textarea.select();
+
+    try {
+      const successful = document.execCommand("copy");
+      if (!successful) {
+        console.error("Fallback: Copy to clipboard failed!");
+      }
+    } catch (err) {
+      console.error("Fallback: Unable to copy to clipboard", err);
+    }
+
+    document.body.removeChild(textarea);
+  }
+
   async function copyToClipboard(content, message) {
-    await navigator.clipboard.writeText(content);
+    if (navigator.clipboard && window.isSecureContext) {
+      // 使用 Clipboard API 实现复制
+      await navigator.clipboard.writeText(content);
+    } else {
+      // 回退到使用 document.execCommand
+      fallbackCopyToClipboard(content);
+    }
 
     // 使用 GM_notification 提示成功
     GM_notification({
