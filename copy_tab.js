@@ -56,7 +56,7 @@
     const container = document.createElement("div");
     container.id = "custom-toast-container";
     container.style.position = "fixed";
-    container.style.top = "1rem"; // 距离顶部 20px
+    container.style.top = "0";
     container.style.left = "50%";
     container.style.transform = "translateX(-50%)"; // 水平居中
     container.style.zIndex = "9999";
@@ -96,7 +96,7 @@
     toast.style.lineHeight = "1.5"; // notification height is 2.5rem
     toast.style.borderRadius = "5rem";
     toast.style.fontSize = "1rem";
-    toast.style.marginTop = ".5rem"; // 多个提示时的间距
+    toast.style.marginTop = "1rem"; // 多个提示时的间距
     toast.style.boxShadow = "0 .25rem .5rem rgba(0, 0, 0, 0.3)";
     toast.style.transition = "all 0.3s ease";
 
