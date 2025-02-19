@@ -48,8 +48,72 @@
     return { title: title, url: url }; // 默认返回原 URL
   }
 
+  // 创建全局浮窗容器
+  function createToastContainer() {
+    const existingToast = document.getElementById("custom-toast-container");
+    if (existingToast) return existingToast;
+
+    const container = document.createElement("div");
+    container.id = "custom-toast-container";
+    container.style.position = "fixed";
+    container.style.top = "1rem"; // 距离顶部 20px
+    container.style.left = "50%";
+    container.style.transform = "translateX(-50%)"; // 水平居中
+    container.style.zIndex = "9999";
+    container.style.pointerEvents = "none"; // 不干扰页面交互
+    container.style.display = "flex";
+    container.style.flexDirection = "column";
+    container.style.alignItems = "center";
+    document.body.appendChild(container);
+    return container;
+  }
+
+  // 显示浮窗提示
+  function showToast(message, duration = 2000) {
+    const container = createToastContainer();
+
+    const toast = document.createElement("div");
+
+    // 构建提示内容
+    const staticText = document.createElement("span"); // 固定部分
+    staticText.textContent = "Copied Tab: ";
+    staticText.style.color = "rgba(255, 255, 255, 0.8)"; // 浅白色
+
+    const dynamicText = document.createElement("b"); // 动态部分
+    dynamicText.textContent = message;
+    dynamicText.style.color = "cyan"; // 蓝绿色
+    dynamicText.style.marginLeft = "0.5rem"; // 与固定部分分隔
+
+    // 将内容添加到通知元素
+    toast.appendChild(staticText);
+    toast.appendChild(dynamicText);
+
+    // 样式设置
+    toast.style.background = "#000C"; // 黑色背景，透明度 80%
+    toast.style.backdropFilter = "blur(.5rem)";
+    toast.style.color = "white";
+    toast.style.padding = ".5rem 1rem";
+    toast.style.lineHeight = "1.5"; // notification height is 2.5rem
+    toast.style.borderRadius = "5rem";
+    toast.style.fontSize = "1rem";
+    toast.style.marginTop = ".5rem"; // 多个提示时的间距
+    toast.style.boxShadow = "0 .25rem .5rem rgba(0, 0, 0, 0.3)";
+    toast.style.transition = "all 0.3s ease";
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.opacity = "0"; // 淡出效果
+      toast.style.marginTop = "-2.5rem";
+      setTimeout(() => {
+        container.removeChild(toast); // 动画结束后移除元素
+      }, 300);
+    }, duration);
+  }
+
   // 复制文本到剪贴板
   function fallbackCopyToClipboard(content) {
+    // http(!s) 等情况下 使用传统方法
     const textarea = document.createElement("textarea");
     textarea.value = content;
     textarea.style.position = "fixed"; // 防止页面滚动
@@ -79,12 +143,8 @@
       fallbackCopyToClipboard(content);
     }
 
-    // 使用 GM_notification 提示成功
-    GM_notification({
-      title: "Tab Copied",
-      text: message || "Copied",
-      timeout: 2000,
-    });
+    // 使用自定义浮窗提示
+    showToast(message);
   }
 
   // 复制标题和链接的主逻辑
