@@ -175,7 +175,7 @@
     document.addEventListener("keydown", (e) => {
       // Determine if the correct modifier key (Ctrl for macOS, Alt for Windows) is pressed
       const prefix = (isMac && e.ctrlKey) || (!isMac && e.altKey);
-      console.log(prefix, e.code);
+      // console.log(prefix, e.code);
       // Check if the appropriate shortcut key is pressed
       if (prefix && e.code === "KeyC") {
         e.preventDefault(); // Prevent default browser behavior
