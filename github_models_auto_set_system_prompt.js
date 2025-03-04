@@ -16,9 +16,18 @@
   const N = "[🧩] ";
   console.log(`${N}油猴脚本开始`);
 
+  const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+
   const TEMPLATES_KEY = "prompt-templates";
   const LAST_TEMPLATE_KEY = "last-used-template";
-  const DEFAULT_PROMPT = "你是一个智能助手";
+
+  const DEFAULT_TEMPLATE_NAME_1 = "❓ 模板说明";
+  const DEFAULT_PROMPT_1 = `✨ 直接修改提示词会自动记忆\n✨ 提示词模板可以改名\n✨ [ctrl+${
+    isMac ? "opt" : "alt"
+  }+数字] 可切换到对应的模板`;
+
+  const DEFAULT_TEMPLATE_NAME_2 = "前端";
+  const DEFAULT_PROMPT_2 = `你是一位资深大厂技术总监，擅长前端开发。我使用 Vue 3、Vite、SCSS、组合式 API 和 <script setup>和pnpm，项目中使用了 Element Plus 和 TDesign 作为主要的前端组件库。请根据这些技术栈，提供专业的开发指导，包括最佳实践、代码结构建议、性能优化方法以及可能的兼容性注意事项。`;
 
   // Heroicons
   // https://heroicons.com/
@@ -81,6 +90,9 @@
   function init() {
     console.log(`${N}初始化脚本...`);
 
+    // 第一次载入时的内容
+    ensureDefaultTemplate();
+
     const observer = new MutationObserver(() => {
       const textarea = document.querySelector('textarea[name="systemPrompt"]');
 
@@ -120,6 +132,28 @@
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  /**
+   * 确保在脚本首次运行时有默认模板。
+   */
+  function ensureDefaultTemplate() {
+    let templates = getTemplates();
+    if (templates.length === 0) {
+      console.log(`${N}未检测到现有模板，添加默认模板...`);
+      templates = [
+        {
+          name: DEFAULT_TEMPLATE_NAME_1,
+          value: DEFAULT_PROMPT_1,
+        },
+        {
+          name: DEFAULT_TEMPLATE_NAME_2,
+          value: DEFAULT_PROMPT_2,
+        },
+      ];
+      saveTemplates(templates);
+      saveLastUsedTemplateIndex(0);
+    }
   }
 
   /**
