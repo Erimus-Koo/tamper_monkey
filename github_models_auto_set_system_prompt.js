@@ -271,7 +271,7 @@
     }
     #template-dropdown, #template-container button {
       height: 2rem;
-      border-radius: 0.25rem;
+      border-radius: 6px;
       border: 1px solid #d1d9e0;
       background: #fff;
       padding: 0 .5rem;
@@ -283,9 +283,11 @@
     #template-container button {
       flex: none;
       margin-left: 0.25rem;
+      transition: border-color 1s ease-in-out;
     }
     #template-container button:hover{
       border-color: #06f;
+      transition: border-color .2s ease-in-out;
     }
   `);
 
