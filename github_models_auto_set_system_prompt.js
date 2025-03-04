@@ -11,7 +11,7 @@
 // ==/UserScript==
 
 (function () {
-  "use strict";
+  ("use strict");
 
   const N = "[🧩] ";
   console.log(`${N}油猴脚本开始`);
@@ -238,11 +238,15 @@
    */
   function addHotkeysEventListener(textarea) {
     document.addEventListener("keydown", (e) => {
-      console.log("🚀 ~ document.addEventListener ~ e.key:", e.key);
+      // 监听 Ctrl + Alt + 数字 的快捷键
       if (e.ctrlKey && e.altKey && /^[1-9]$/.test(e.key)) {
         const key = e.key;
         const templates = getTemplates();
         const index = parseInt(key, 10) - 1;
+
+        // 阻止默认行为和传播
+        e.preventDefault();
+        e.stopImmediatePropagation();
 
         if (templates[index]) {
           const dropdown = document.querySelector("#template-dropdown");
@@ -250,6 +254,7 @@
           const template = templates[index];
           updateTextAreaValue(textarea, template.value);
           saveLastUsedTemplateIndex(index);
+
           console.log(`${N}快捷键: 已切换到模板 ${index + 1}`);
         }
       }
