@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Github Models - Auto Set System Prompt with Templates
-// @version      0.6.0
+// @version      0.6.1
 // @description  自动记忆并填写系统提示词，并支持模板管理、快捷键和重命名
 // @author       Erimus
 // @namespace    https://greasyfork.org/users/46393
@@ -19,6 +19,16 @@
   const TEMPLATES_KEY = "prompt-templates";
   const LAST_TEMPLATE_KEY = "last-used-template";
   const DEFAULT_PROMPT = "你是一个智能助手";
+
+  // Heroicons
+  // https://heroicons.com/
+  const SVG_ICONS = {
+    add: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6"> <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /> </svg> `,
+    delete: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6"> <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /> </svg>`,
+    rename: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6"> <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /> </svg> `,
+    moveUp: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6"> <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18" /> </svg>`,
+    moveDown: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6"> <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" /> </svg>`,
+  };
 
   /**
    * 获取保存的模板列表。
@@ -113,7 +123,7 @@
   }
 
   /**
-   * 创建模板管理下拉菜单。
+   * 创建模板管理下拉菜单和按钮。
    */
   function addTemplateDropdown(textarea) {
     const templates = getTemplates();
@@ -135,27 +145,24 @@
 
     dropdown.value = lastTemplateIndex.toString();
 
-    const addButton = document.createElement("button");
-    addButton.textContent = "+ Add";
-    addButton.style.marginLeft = "10px";
-    addButton.style.cursor = "pointer";
+    // 创建按钮
+    const addButton = createIconButton(SVG_ICONS.add, "添加模板");
+    console.log("🚀 ~ addTemplateDropdown ~ 'SVG_ICONS.add':", SVG_ICONS.add);
+    const deleteButton = createIconButton(SVG_ICONS.delete, "删除模板");
+    const renameButton = createIconButton(SVG_ICONS.rename, "重命名模板");
+    const moveUpButton = createIconButton(SVG_ICONS.moveUp, "上移模板");
+    const moveDownButton = createIconButton(SVG_ICONS.moveDown, "下移模板");
 
-    const deleteButton = document.createElement("button");
-    deleteButton.textContent = "× Del";
-    deleteButton.style.marginLeft = "10px";
-    deleteButton.style.cursor = "pointer";
-
-    const renameButton = document.createElement("button");
-    renameButton.textContent = "✎ Ren";
-    renameButton.style.marginLeft = "10px";
-    renameButton.style.cursor = "pointer";
-
+    // 将元素添加到容器
     container.appendChild(dropdown);
+    container.appendChild(moveUpButton);
+    container.appendChild(moveDownButton);
+    container.appendChild(renameButton);
     container.appendChild(addButton);
     container.appendChild(deleteButton);
-    container.appendChild(renameButton);
     textarea.parentElement.parentElement.appendChild(container);
 
+    // 下拉菜单切换事件
     dropdown.addEventListener("change", () => {
       const templates = getTemplates();
       const selectedValue = parseInt(dropdown.value, 10);
@@ -166,6 +173,7 @@
       }
     });
 
+    // 按钮事件监听
     addButton.addEventListener("click", () => {
       const newTemplateName = prompt(
         "请输入模板名称：",
@@ -231,6 +239,75 @@
         }
       }
     });
+
+    moveUpButton.addEventListener("click", () => {
+      const selectedValue = parseInt(dropdown.value, 10);
+
+      if (!isNaN(selectedValue) && selectedValue > 0) {
+        const templates = getTemplates();
+        const temp = templates[selectedValue];
+        templates[selectedValue] = templates[selectedValue - 1];
+        templates[selectedValue - 1] = temp;
+        saveTemplates(templates);
+
+        dropdown.options[selectedValue].textContent =
+          templates[selectedValue].name;
+        dropdown.options[selectedValue - 1].textContent =
+          templates[selectedValue - 1].name;
+
+        dropdown.value = (selectedValue - 1).toString();
+        updateTextAreaValue(textarea, templates[selectedValue - 1].value);
+        saveLastUsedTemplateIndex(selectedValue - 1);
+      }
+    });
+
+    moveDownButton.addEventListener("click", () => {
+      const selectedValue = parseInt(dropdown.value, 10);
+
+      if (!isNaN(selectedValue) && selectedValue < templates.length - 1) {
+        const templates = getTemplates();
+        const temp = templates[selectedValue];
+        templates[selectedValue] = templates[selectedValue + 1];
+        templates[selectedValue + 1] = temp;
+        saveTemplates(templates);
+
+        dropdown.options[selectedValue].textContent =
+          templates[selectedValue].name;
+        dropdown.options[selectedValue + 1].textContent =
+          templates[selectedValue + 1].name;
+
+        dropdown.value = (selectedValue + 1).toString();
+        updateTextAreaValue(textarea, templates[selectedValue + 1].value);
+        saveLastUsedTemplateIndex(selectedValue + 1);
+      }
+    });
+  }
+
+  /**
+   * 创建按钮，带有图标和 hover 提示文字。
+   */
+  function createIconButton(icon, title) {
+    const button = document.createElement("button");
+    button.innerHTML = icon;
+    button.title = title;
+    button.style.width = "2rem";
+    button.style.height = "2rem";
+    button.style.textAlign = "center";
+    button.style.lineHeight = "2rem";
+    button.style.borderRadius = "6px";
+    button.style.border = "1px solid #d1d9e0";
+    button.style.background = "#fff";
+    button.style.padding = "0";
+    button.style.cursor = "pointer";
+    button.style.transition = "border-color .2s ease-in-out";
+    button.addEventListener("mouseover", () => {
+      button.style.borderColor = "#06f";
+    });
+    button.addEventListener("mouseout", () => {
+      button.style.borderColor = "#d1d9e0";
+    });
+
+    return button;
   }
 
   /**
@@ -282,12 +359,25 @@
     }
     #template-container button {
       flex: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 2rem;
+      height: 2rem;
+      text-align: center;
+      padding: 0;
       margin-left: 0.25rem;
-      transition: border-color 1s ease-in-out;
-    }
-    #template-container button:hover{
-      border-color: #06f;
       transition: border-color .2s ease-in-out;
+    }
+    #template-container button svg {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+    #template-container button:hover {
+      border-color: #06f;
+    }
+    #template-container button:hover svg path { 
+      stroke: #06f; 
     }
   `);
 
