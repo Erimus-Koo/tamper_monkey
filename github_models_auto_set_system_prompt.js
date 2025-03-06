@@ -21,6 +21,10 @@
   const TEMPLATES_KEY = "prompt-templates";
   const LAST_TEMPLATE_KEY = "last-used-template";
 
+  // 新增模版时使用
+  const DEFAULT_PROMPT = `你是一个智能助理`;
+
+  // 初次载入时使用
   const DEFAULT_TEMPLATE_NAME_1 = "❓ 模板说明";
   const DEFAULT_PROMPT_1 = `✨ 直接修改提示词会自动记忆\n✨ 提示词模板可以改名\n✨ [Ctrl + ${
     isMac ? "Opt" : "Alt"
@@ -173,7 +177,7 @@
     templates.forEach((template, index) => {
       const option = document.createElement("option");
       option.value = index.toString();
-      option.textContent = template.name || `Template ${index + 1}`;
+      option.textContent = template.name || `模版 ${index + 1}`;
       dropdown.appendChild(option);
     });
 
@@ -181,7 +185,6 @@
 
     // 创建按钮
     const addButton = createIconButton(SVG_ICONS.add, "添加模板");
-    console.log("🚀 ~ addTemplateDropdown ~ 'SVG_ICONS.add':", SVG_ICONS.add);
     const deleteButton = createIconButton(SVG_ICONS.delete, "删除模板");
     const renameButton = createIconButton(SVG_ICONS.rename, "重命名模板");
     const moveUpButton = createIconButton(SVG_ICONS.moveUp, "上移模板");
