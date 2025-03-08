@@ -226,6 +226,12 @@
         newOption.value = (templates.length - 1).toString();
         newOption.textContent = newTemplateName;
         dropdown.appendChild(newOption);
+
+        // 自动切换到新建的模板
+        const newTemplateIndex = templates.length - 1;
+        dropdown.value = newTemplateIndex.toString(); // 设置下拉列表选中项
+        updateTextAreaValue(textarea, newTemplateContent); // 更新文本框内容
+        saveLastUsedTemplateIndex(newTemplateIndex); // 保存当前模板索引到 localStorage
       }
     });
 
