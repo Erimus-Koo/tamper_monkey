@@ -64,6 +64,7 @@
     container.style.display = "flex";
     container.style.flexDirection = "column";
     container.style.alignItems = "center";
+    container.style.fontSize = "16px";
     document.body.appendChild(container);
     return container;
   }
@@ -82,7 +83,7 @@
     const dynamicText = document.createElement("b"); // 动态部分
     dynamicText.textContent = message;
     dynamicText.style.color = "cyan"; // 蓝绿色
-    dynamicText.style.marginLeft = "0.5rem"; // 与固定部分分隔
+    dynamicText.style.marginLeft = "0.5em"; // 与固定部分分隔
 
     // 将内容添加到通知元素
     toast.appendChild(staticText);
@@ -90,23 +91,23 @@
 
     // 样式设置
     toast.style.background = "#000C"; // 黑色背景，透明度 80%
-    toast.style.backdropFilter = "blur(.5rem)";
+    toast.style.backdropFilter = "blur(.5em)";
     toast.style.color = "white";
-    toast.style.padding = ".5rem 1rem";
-    toast.style.lineHeight = "1.5"; // notification height is 2.5rem
-    toast.style.borderRadius = "5rem";
-    toast.style.fontSize = "1rem";
-    toast.style.marginTop = "1rem"; // 多个提示时的间距
-    toast.style.boxShadow = "0 .25rem .5rem rgba(0, 0, 0, 0.3)";
+    toast.style.padding = ".5em 1em";
+    toast.style.lineHeight = "1.5"; // notification height is 2.5em
+    toast.style.borderRadius = "5em";
+    toast.style.fontSize = "1em";
+    toast.style.marginTop = "1em"; // 多个提示时的间距
+    toast.style.boxShadow = "0 .25em .5em rgba(0, 0, 0, 0.3)";
     toast.style.transition = "all 0.3s ease";
 
     container.appendChild(toast);
 
     setTimeout(() => {
       toast.style.opacity = "0"; // 淡出效果
-      toast.style.marginTop = "-2.5rem";
+      toast.style.marginTop = "-2.5em";
       setTimeout(() => {
-        container.removeChild(toast); // 动画结束后移除元素
+        container.emoveChild(toast); // 动画结束后移除元素
       }, 300);
     }, duration);
   }
@@ -131,7 +132,7 @@
       console.error("Fallback: Unable to copy to clipboard", err);
     }
 
-    document.body.removeChild(textarea);
+    document.body.emoveChild(textarea);
   }
 
   async function copyToClipboard(content, message) {
