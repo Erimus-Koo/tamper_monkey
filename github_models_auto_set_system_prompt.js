@@ -25,13 +25,22 @@
   const DEFAULT_PROMPT = `你是一个智能助理`;
 
   // 初次载入时使用
-  const DEFAULT_TEMPLATE_NAME_1 = "❓ 模板说明";
-  const DEFAULT_PROMPT_1 = `✨ 直接修改提示词会自动记忆\n✨ 提示词模板可以改名\n✨ [Ctrl + ${
-    isMac ? "Opt" : "Alt"
-  } + 数字] 可切换模板`;
-
-  const DEFAULT_TEMPLATE_NAME_2 = "前端";
-  const DEFAULT_PROMPT_2 = `你是一位资深大厂技术总监，擅长前端开发。我使用 Vue 3、Vite、SCSS、组合式 API 和 <script setup>和pnpm，项目中使用了 Element Plus 和 TDesign 作为主要的前端组件库。请根据这些技术栈，提供专业的开发指导，包括最佳实践、代码结构建议、性能优化方法以及可能的兼容性注意事项。`;
+  const DEFAULT_TEMPLATES = [
+    {
+      name: "智能助理",
+      value: `你是一个智能助理，尽量简洁清楚地回答我的提问。`,
+    },
+    {
+      name: "❓ 模板说明",
+      value: `✨ 直接修改提示词会自动记忆\n✨ 提示词模板可以改名\n✨ [Ctrl + ${
+        isMac ? "Opt" : "Alt"
+      } + 数字] 可切换模板`,
+    },
+    {
+      name: "前端",
+      value: `你是一位资深大厂技术总监，擅长前端开发。我使用 Vue 3、Vite、SCSS、组合式 API 和 <script setup>和pnpm，项目中使用了 Element Plus 和 TDesign 作为主要的前端组件库。请根据这些技术栈，提供专业的开发指导，包括最佳实践、代码结构建议、性能优化方法以及可能的兼容性注意事项。`,
+    },
+  ];
 
   // Heroicons
   // https://heroicons.com/
@@ -145,18 +154,9 @@
     let templates = getTemplates();
     if (templates.length === 0) {
       console.log(`${N}未检测到现有模板，添加默认模板...`);
-      templates = [
-        {
-          name: DEFAULT_TEMPLATE_NAME_1,
-          value: DEFAULT_PROMPT_1,
-        },
-        {
-          name: DEFAULT_TEMPLATE_NAME_2,
-          value: DEFAULT_PROMPT_2,
-        },
-      ];
+      templates = DEFAULT_TEMPLATES;
       saveTemplates(templates);
-      saveLastUsedTemplateIndex(0);
+      saveLastUsedTemplateIndex(1); // 指定默认激活的模版
     }
   }
 
@@ -359,10 +359,10 @@
   function addHotkeysEventListener(textarea) {
     document.addEventListener("keydown", (e) => {
       // 监听 Ctrl + Alt + 数字 的快捷键
-      if (e.ctrlKey && e.altKey && /^[1-9]$/.test(e.key)) {
+      if (e.ctrlKey && e.altKey && /^[0-9]$/.test(e.key)) {
         const key = e.key;
         const templates = getTemplates();
-        const index = parseInt(key, 10) - 1;
+        const index = parseInt(key, 10);
 
         // 阻止默认行为和传播
         e.preventDefault();
@@ -375,7 +375,7 @@
           updateTextAreaValue(textarea, template.value);
           saveLastUsedTemplateIndex(index);
 
-          console.log(`${N}快捷键: 已切换到模板 ${index + 1}`);
+          console.log(`${N}快捷键: 已切换到模板 ${index}`);
         }
       }
     });

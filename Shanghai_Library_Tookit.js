@@ -179,8 +179,12 @@ ${contributorMeta}
           if (i != 0) {
             const td = tr.querySelectorAll("td");
             if (
-              td[2].textContent.includes("外借") &&
-              td[3].textContent.includes("已归还")
+              (td[2].textContent.includes("外借") ||
+                td[2].textContent.includes(
+                  "Reference Circulation Collection"
+                )) &&
+              (td[3].textContent.includes("已归还") ||
+                td[3].textContent.includes("Available"))
             ) {
               libAvailable = true;
               locAvailable = true;
@@ -197,7 +201,7 @@ ${contributorMeta}
   observe_and_run(libSelector, hideUnavailable, false);
 
   GM_addStyle(`
-*[available="false"]{display:none;}
+*[available="false"]{opacity:.5;}
     `);
   // -------------------------------------------------- Get Available - END
 })();
