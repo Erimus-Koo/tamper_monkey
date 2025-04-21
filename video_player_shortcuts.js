@@ -313,27 +313,43 @@ z: 播放恢复原速
       if (!videoObjAll.includes(media)) {
         videoObjAll.push(media);
         // console.debug("📷 Find new video element:", media);
-        media.addEventListener("play", videoStartPlay);
+        media.addEventListener("play", () => {
+          videoStartPlay(media);
+          // 在 iframe 中的话发送消息给父窗口
+          if (window.self !== window.top) {
+            window.top.postMessage({ type: "videoStarted" }, "*");
+          }
+        });
         media.addEventListener("ended", () => {
           // 在 iframe 中的话发送消息给父窗口
           if (window.self !== window.top) {
-            const data = { type: "videoEnded" };
-            window.top.postMessage(data, "*");
+            window.top.postMessage({ type: "videoEnded" }, "*");
           }
         });
       }
     });
   };
 
-  const videoStartPlay = (e) => {
+  const videoStartPlay = (media) => {
     // 更新当前正在播放的视频元素
-    videoObj = e.target;
+    videoObj = media;
+    videoObj.focus();
     console.debug(`${N}Current playing videoObj:`, videoObj);
 
     // 读取播放器配置
     changePlaySpeed();
     changeVideoVolume();
   };
+
+  // 处理 iframe 外层消息事件
+  window.addEventListener("message", (data) => {
+    // console.log("🚀 ~ window.addEventListener ~ data:", data);
+    // 解析指令并处理
+    if (data.data.action === "focusVideo") {
+      console.debug("👆 Received focus request from outer page.");
+      videoObj?.focus();
+    }
+  });
 
   // 初始化动作（以前B站跳转油猴不会重载，所以抽象，现在似乎已无必要）
   const init = function () {
