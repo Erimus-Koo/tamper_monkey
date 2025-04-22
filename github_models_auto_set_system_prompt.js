@@ -16,6 +16,11 @@
   const N = "[🧩] ";
   console.log(`${N}油猴脚本开始`);
 
+  let templates; // 模板列表
+  let lastTemplateIndex; // 上次使用的模板索引
+  let dropdown; // 下拉框
+  let textarea; // 文本框
+
   const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
 
   const TEMPLATES_KEY = "prompt-templates";
@@ -55,59 +60,57 @@
   /**
    * 获取保存的模板列表。
    */
-  function getTemplates() {
-    return JSON.parse(localStorage.getItem(TEMPLATES_KEY)) || [];
-  }
+  const getTemplates = () =>
+    JSON.parse(localStorage.getItem(TEMPLATES_KEY)) || [];
 
   /**
    * 保存模板列表到 localStorage。
    * @param {array} templates - 模板列表数组。
    */
-  function saveTemplates(templates) {
+  const saveTemplates = (templates) => {
     localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates));
     console.log(`${N}模板已保存:`, templates);
-  }
+  };
 
   /**
    * 获取最后一次使用的模板索引。
    */
-  function getLastUsedTemplateIndex() {
-    return parseInt(localStorage.getItem(LAST_TEMPLATE_KEY) || "0", 10);
-  }
+  const getLastUsedTemplateIndex = () =>
+    parseInt(localStorage.getItem(LAST_TEMPLATE_KEY) || "0", 10);
 
   /**
    * 保存最后一次使用的模板索引。
    * @param {number} index - 模板的索引。
    */
-  function saveLastUsedTemplateIndex(index) {
+  const saveLastUsedTemplateIndex = (index) => {
     localStorage.setItem(LAST_TEMPLATE_KEY, index.toString());
     console.log(`${N}最后使用的模板索引已保存:`, index);
-  }
+  };
 
   /**
    * 更新文本框内容，同时触发 input 事件。
    * @param {HTMLElement} textarea - 文本框元素。
    * @param {string} value - 要设置的值。
    */
-  function updateTextAreaValue(textarea, value) {
+  const updateTextAreaValue = (textarea, value) => {
     Object.getOwnPropertyDescriptor(
       Object.getPrototypeOf(textarea),
       "value"
     ).set.call(textarea, value);
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
-  }
+  };
 
   /**
    * 初始化脚本功能。
    */
-  function init() {
+  const init = () => {
     console.log(`${N}初始化脚本...`);
 
     // 第一次载入时的内容
     ensureDefaultTemplate();
 
     const observer = new MutationObserver(() => {
-      const textarea = document.querySelector('textarea[name="systemPrompt"]');
+      textarea = document.querySelector('textarea[name="systemPrompt"]');
 
       if (textarea) {
         console.log(`${N}找到文本框与按钮，初始化功能...`);
@@ -145,12 +148,12 @@
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
-  }
+  };
 
   /**
    * 确保在脚本首次运行时有默认模板。
    */
-  function ensureDefaultTemplate() {
+  const ensureDefaultTemplate = () => {
     let templates = getTemplates();
     if (templates.length === 0) {
       console.log(`${N}未检测到现有模板，添加默认模板...`);
@@ -158,30 +161,22 @@
       saveTemplates(templates);
       saveLastUsedTemplateIndex(1); // 指定默认激活的模版
     }
-  }
+  };
 
   /**
    * 创建模板管理下拉菜单和按钮。
    */
-  function addTemplateDropdown(textarea) {
-    const templates = getTemplates();
-    const lastTemplateIndex = getLastUsedTemplateIndex();
-
+  const addTemplateDropdown = () => {
+    // 设置组件最外层容器
     const container = document.createElement("div");
     container.id = "template-container";
-    container.style.marginBottom = "10px";
+    container.style.marginBottom = "8px";
 
-    const dropdown = document.createElement("select");
+    // 创建下拉框
+    dropdown = document.createElement("select");
     dropdown.id = "template-dropdown";
 
-    templates.forEach((template, index) => {
-      const option = document.createElement("option");
-      option.value = index.toString();
-      option.textContent = template.name || `模版 ${index + 1}`;
-      dropdown.appendChild(option);
-    });
-
-    dropdown.value = lastTemplateIndex.toString();
+    updateDropdown();
 
     // 创建按钮
     const addButton = createIconButton(SVG_ICONS.add, "添加模板");
@@ -205,66 +200,59 @@
       const selectedValue = parseInt(dropdown.value, 10);
 
       if (!isNaN(selectedValue)) {
-        updateTextAreaValue(textarea, templates[selectedValue].value);
         saveLastUsedTemplateIndex(selectedValue);
+        updateTextAreaValue(textarea, templates[selectedValue].value);
       }
     });
 
     // 按钮事件监听
+    // 添加模版
     addButton.addEventListener("click", () => {
+      const templates = getTemplates();
       const newTemplateName = prompt(
         "请输入模板名称：",
-        `Template ${templates.length + 1}`
+        `模板 ${templates.length}`
       );
       const newTemplateContent = prompt("请输入新的模板内容：", DEFAULT_PROMPT);
       if (newTemplateName && newTemplateContent) {
-        const templates = getTemplates();
+        // 更新模版列表
         templates.push({ name: newTemplateName, value: newTemplateContent });
         saveTemplates(templates);
 
-        const newOption = document.createElement("option");
-        newOption.value = (templates.length - 1).toString();
-        newOption.textContent = newTemplateName;
-        dropdown.appendChild(newOption);
-
         // 自动切换到新建的模板
         const newTemplateIndex = templates.length - 1;
-        dropdown.value = newTemplateIndex.toString(); // 设置下拉列表选中项
-        updateTextAreaValue(textarea, newTemplateContent); // 更新文本框内容
         saveLastUsedTemplateIndex(newTemplateIndex); // 保存当前模板索引到 localStorage
+
+        updateDropdown();
       }
     });
 
+    // 删除模版
     deleteButton.addEventListener("click", () => {
-      const selectedValue = parseInt(dropdown.value, 10);
+      const templates = getTemplates();
+      if (templates.length === 1) {
+        alert("至少需要一个模版，请直接修改内容或者改名。");
+        return;
+      }
 
+      const selectedValue = parseInt(dropdown.value, 10);
       if (!isNaN(selectedValue)) {
         const confirmDelete = confirm("确定要删除当前选中的模板吗？");
         if (confirmDelete) {
+          // 更新模版列表
           const templates = getTemplates();
           templates.splice(selectedValue, 1);
           saveTemplates(templates);
 
-          while (dropdown.firstChild) dropdown.removeChild(dropdown.firstChild);
+          const index = selectedValue > 1 ? selectedValue - 1 : selectedValue;
+          saveLastUsedTemplateIndex(index);
 
-          templates.forEach((template, index) => {
-            const option = document.createElement("option");
-            option.value = index.toString();
-            option.textContent = template.name || `Template ${index + 1}`;
-            dropdown.appendChild(option);
-          });
-
-          if (templates[0]) {
-            dropdown.value = "0";
-            saveLastUsedTemplateIndex(0);
-            updateTextAreaValue(textarea, templates[0].value);
-          } else {
-            updateTextAreaValue(textarea, "");
-          }
+          updateDropdown();
         }
       }
     });
 
+    // 重命名模版
     renameButton.addEventListener("click", () => {
       const selectedValue = parseInt(dropdown.value, 10);
 
@@ -278,53 +266,70 @@
         if (newName) {
           templates[selectedValue].name = newName;
           saveTemplates(templates);
-          dropdown.options[selectedValue].textContent = newName;
+
+          updateDropdown();
         }
       }
     });
 
+    // 上移模版
     moveUpButton.addEventListener("click", () => {
+      const templates = getTemplates();
       const selectedValue = parseInt(dropdown.value, 10);
 
       if (!isNaN(selectedValue) && selectedValue > 0) {
-        const templates = getTemplates();
         const temp = templates[selectedValue];
         templates[selectedValue] = templates[selectedValue - 1];
         templates[selectedValue - 1] = temp;
         saveTemplates(templates);
 
-        dropdown.options[selectedValue].textContent =
-          templates[selectedValue].name;
-        dropdown.options[selectedValue - 1].textContent =
-          templates[selectedValue - 1].name;
-
         dropdown.value = (selectedValue - 1).toString();
-        updateTextAreaValue(textarea, templates[selectedValue - 1].value);
         saveLastUsedTemplateIndex(selectedValue - 1);
+
+        updateDropdown();
       }
     });
 
+    // 下移模版
     moveDownButton.addEventListener("click", () => {
+      const templates = getTemplates();
       const selectedValue = parseInt(dropdown.value, 10);
 
       if (!isNaN(selectedValue) && selectedValue < templates.length - 1) {
-        const templates = getTemplates();
         const temp = templates[selectedValue];
         templates[selectedValue] = templates[selectedValue + 1];
         templates[selectedValue + 1] = temp;
         saveTemplates(templates);
 
-        dropdown.options[selectedValue].textContent =
-          templates[selectedValue].name;
-        dropdown.options[selectedValue + 1].textContent =
-          templates[selectedValue + 1].name;
-
         dropdown.value = (selectedValue + 1).toString();
-        updateTextAreaValue(textarea, templates[selectedValue + 1].value);
         saveLastUsedTemplateIndex(selectedValue + 1);
+
+        updateDropdown();
       }
     });
-  }
+  };
+
+  const updateDropdown = () => {
+    // 清空下拉框
+    dropdown.innerHTML = "";
+    // 更新数据
+    const templates = getTemplates();
+    let lastTemplateIndex = getLastUsedTemplateIndex();
+    if (lastTemplateIndex < 0 || lastTemplateIndex >= templates.length) {
+      lastTemplateIndex = 0;
+    }
+    // 创建选项
+    templates.forEach((template, index) => {
+      const option = document.createElement("option");
+      option.value = index.toString();
+      option.textContent = `${index}. ${template.name}` || `模版 ${index + 1}`;
+      dropdown.appendChild(option);
+    });
+    // 更新选中项
+    dropdown.value = lastTemplateIndex.toString();
+    // 更新文本框内容
+    updateTextAreaValue(textarea, templates[lastTemplateIndex].value);
+  };
 
   /**
    * 创建按钮，带有图标和 hover 提示文字。
@@ -356,24 +361,23 @@
   /**
    * 监听快捷键事件，为模板添加快捷键功能。
    */
-  function addHotkeysEventListener(textarea) {
+  function addHotkeysEventListener() {
     document.addEventListener("keydown", (e) => {
+      console.log("🚀 ~ document.addEventListener ~ e:", e);
       // 监听 Ctrl + Alt + 数字 的快捷键
-      if (e.ctrlKey && e.altKey && /^[0-9]$/.test(e.key)) {
-        const key = e.key;
+      if (e.ctrlKey && e.altKey && /^(Digit|Numpad)[0-9]$/.test(e.code)) {
+        const match = e.code.match(/[0-9]$/);
+        const index = match ? parseInt(match[0], 10) : null;
         const templates = getTemplates();
-        const index = parseInt(key, 10);
 
         // 阻止默认行为和传播
         e.preventDefault();
         e.stopImmediatePropagation();
 
         if (templates[index]) {
-          const dropdown = document.querySelector("#template-dropdown");
-          dropdown.value = index.toString();
-          const template = templates[index];
-          updateTextAreaValue(textarea, template.value);
           saveLastUsedTemplateIndex(index);
+
+          updateDropdown();
 
           console.log(`${N}快捷键: 已切换到模板 ${index}`);
         }
