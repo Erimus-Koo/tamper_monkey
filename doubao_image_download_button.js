@@ -97,19 +97,19 @@
 
     // 复制文本
     let text = "重新生成20张比例9:16。";
-    // Windows: Alt+C
-    if (!isMac && e.altKey && e.key.toLowerCase() === "c") {
+    // Windows: Alt+V
+    if (!isMac && e.altKey && e.key.toLowerCase() === "v") {
       navigator.clipboard.writeText(text);
     }
-    // Mac: Ctrl+C
-    if (isMac && e.ctrlKey && e.key.toLowerCase() === "c") {
+    // Mac: Ctrl+V
+    if (isMac && e.ctrlKey && e.key.toLowerCase() === "v") {
       navigator.clipboard.writeText(text);
     }
     text += "所有图全都按如下要求修改：";
-    if (!isMac && e.altKey && e.shiftKey && e.key.toLowerCase() === "c") {
+    if (!isMac && e.altKey && e.shiftKey && e.key.toLowerCase() === "v") {
       navigator.clipboard.writeText(text);
     }
-    if (isMac && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "c") {
+    if (isMac && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "v") {
       navigator.clipboard.writeText(text);
     }
 
