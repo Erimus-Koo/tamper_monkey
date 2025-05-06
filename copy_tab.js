@@ -107,7 +107,7 @@
       toast.style.opacity = "0"; // 淡出效果
       toast.style.marginTop = "-2.5em";
       setTimeout(() => {
-        container.emoveChild(toast); // 动画结束后移除元素
+        container.removeChild(toast); // 动画结束后移除元素
       }, 300);
     }, duration);
   }

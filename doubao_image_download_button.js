@@ -92,14 +92,24 @@
   // 快捷键触发（Ctrl+Q 或 Alt+Q），避免输入域中误触发
   document.addEventListener("keydown", function (e) {
     console.log("🚀 ~ e:", e);
+    const isMac = navigator.userAgentData.platform === "macOS";
+    console.log("🚀 ~ isMac:", isMac);
 
     // 复制文本
     let text = "重新生成20张比例9:16。";
-    if (e.altKey && e.key.toLowerCase() === "v") {
+    // Windows: Alt+C
+    if (!isMac && e.altKey && e.key.toLowerCase() === "c") {
+      navigator.clipboard.writeText(text);
+    }
+    // Mac: Ctrl+C
+    if (isMac && e.ctrlKey && e.key.toLowerCase() === "c") {
       navigator.clipboard.writeText(text);
     }
     text += "所有图全都按如下要求修改：";
-    if (e.altKey && e.shiftKey && e.key.toLowerCase() === "v") {
+    if (!isMac && e.altKey && e.shiftKey && e.key.toLowerCase() === "c") {
+      navigator.clipboard.writeText(text);
+    }
+    if (isMac && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "c") {
       navigator.clipboard.writeText(text);
     }
 
