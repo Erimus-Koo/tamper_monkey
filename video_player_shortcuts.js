@@ -120,7 +120,7 @@ z: 播放恢复原速
   const setSpeed = (speed) => {
     if (videoObj.playbackRate === speed) return;
     videoObj.playbackRate = speed;
-    const content = `播放速度: ${speed}<br><code style="color:#f90;font-size:.9em">C:加速 V:减速 Z:还原</code>`;
+    const content = `播放速度: ${speed}<br><span style="color:#f90;font-size:.9em;font-family:'JetBrains Mono',Consolas,Menlo,sans-serif">C:加速 V:减速 Z:还原</span>`;
     if (videoObj instanceof HTMLVideoElement) {
       // video: 在较小的视频 如GIF 表情包等场景下 不提示
       if (videoObj.offsetWidth > 200 && videoObj.offsetHeight > 200) {

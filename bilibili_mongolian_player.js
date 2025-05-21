@@ -223,7 +223,7 @@ m: 静音
     if (videoObj) {
       if (videoObj.playbackRate === speed) return;
       videoObj.playbackRate = speed;
-      const content = `播放速度: ${speed}<br><code style="color:#f90;font-size:.9em">C:加速 V:减速 Z:还原</code>`;
+      const content = `播放速度: ${speed}<br><span style="color:#f90;font-size:.9em;font-family:'JetBrains Mono',Consolas,Menlo,sans-serif">C:加速 V:减速 Z:还原</span>`;
       notify(content, ".bpx-player-ctrl-playbackrate", 0, -100);
     }
   };
