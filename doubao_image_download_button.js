@@ -93,7 +93,7 @@
   document.addEventListener("keydown", function (e) {
     console.log("🚀 ~ e:", e);
     const isMac = navigator.userAgentData.platform === "macOS";
-    console.log("🚀 ~ isMac:", isMac);
+    // console.log("🚀 ~ isMac:", isMac);
 
     // 复制文本
     let text = "重新生成20张比例9:16。";
@@ -113,7 +113,7 @@
       navigator.clipboard.writeText(text);
     }
 
-    // Ctrl+Q 或 Alt+Q
+    // 下载图片 Ctrl+Q 或 Alt+Q
     if (
       (e.ctrlKey && e.key.toLowerCase() === "q") ||
       (e.altKey && e.key.toLowerCase() === "q") ||
@@ -121,6 +121,14 @@
     ) {
       console.log("下载图片触发快捷键");
       btn.click();
+    }
+
+    // 重新生成
+    if ((isMac ? e.ctrlKey : e.altKey) && e.key.toLowerCase() === "r") {
+      const btnList = document.querySelectorAll(
+        'button[data-testid="message_action_regenerate"]'
+      );
+      btnList[btnList.length - 1].click();
     }
 
     // --------------------------------------------------- 以下快捷键需要离开输入域才触发
