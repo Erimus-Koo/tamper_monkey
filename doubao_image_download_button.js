@@ -14,7 +14,7 @@
 // @require      https://raw.githubusercontent.com/Erimus-Koo/tamper_monkey/master/private/doubao_image_download_button.js
 
 (function () {
-  "use strict";
+  ("use strict");
 
   // 创建按钮
   const btn = document.createElement("button");
@@ -91,25 +91,20 @@
 
   // 快捷键触发（Ctrl+Q 或 Alt+Q），避免输入域中误触发
   document.addEventListener("keydown", function (e) {
-    console.log("🚀 ~ e:", e);
+    // console.log("🚀 ~ e:", e);
     const isMac = navigator.userAgentData.platform === "macOS";
     // console.log("🚀 ~ isMac:", isMac);
+    const modifier = isMac ? e.ctrlKey : e.altKey;
 
     // 复制文本
     let text = "重新生成20张比例9:16。";
     // Windows: Alt+V
-    if (!isMac && e.altKey && e.key.toLowerCase() === "v") {
+    if (modifier && e.key.toLowerCase() === "v") {
       navigator.clipboard.writeText(text);
     }
-    // Mac: Ctrl+V
-    if (isMac && e.ctrlKey && e.key.toLowerCase() === "v") {
-      navigator.clipboard.writeText(text);
-    }
+
     text += "所有图全都按如下要求修改：";
-    if (!isMac && e.altKey && e.shiftKey && e.key.toLowerCase() === "v") {
-      navigator.clipboard.writeText(text);
-    }
-    if (isMac && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "v") {
+    if (modifier && e.shiftKey && e.key.toLowerCase() === "v") {
       navigator.clipboard.writeText(text);
     }
 
@@ -121,14 +116,25 @@
     ) {
       console.log("下载图片触发快捷键");
       btn.click();
+
+      // 点击原生的下载按钮（下载文件名为对话名）
+      // document
+      //   .querySelector('div[data-testid="edit_image_download_button"]')
+      //   ?.click();
     }
 
     // 重新生成
-    if ((isMac ? e.ctrlKey : e.altKey) && e.key.toLowerCase() === "r") {
+    if (modifier && e.key.toLowerCase() === "r") {
       const btnList = document.querySelectorAll(
         'button[data-testid="message_action_regenerate"]'
       );
       btnList[btnList.length - 1].click();
+    }
+
+    // 到聊天框底部
+    if (modifier && e.shiftKey && e.key.toLowerCase() === "d") {
+      e.preventDefault();
+      document.querySelector('div[class*="to-bottom-button"]')?.click();
     }
 
     // --------------------------------------------------- 以下快捷键需要离开输入域才触发
@@ -157,4 +163,43 @@
         ?.click();
     }
   });
+
+  // 让缩略图可以被Vimnium点击 -------------------------------- START
+  const imgSelector = 'div[data-testid="mdbox_image"]';
+  // 封装处理函数
+  function makeClickable(node) {
+    // 避免重复处理
+    if (node.dataset.vimnumReady) return;
+    node.dataset.vimnumReady = "1";
+
+    // 增加可聚焦性
+    node.setAttribute("tabindex", "0");
+    // 增加 role，让 Vimium 能检索到
+    node.setAttribute("role", "button");
+    // 改变鼠标指针
+    node.style.cursor = "pointer";
+  }
+
+  // 处理已有元素
+  document.querySelectorAll(imgSelector).forEach(makeClickable);
+
+  // 观察新增元素
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType === 1) {
+          // 是元素
+          if (node.matches && node.matches(imgSelector)) {
+            makeClickable(node);
+          }
+          // 如果是容器，处理下属结点
+          node.querySelectorAll &&
+            node.querySelectorAll(imgSelector).forEach(makeClickable);
+        }
+      });
+    }
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+  // 让缩略图可以被Vimnium点击 -------------------------------- END
 })();
