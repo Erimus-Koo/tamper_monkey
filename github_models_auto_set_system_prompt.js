@@ -363,7 +363,7 @@
    */
   function addHotkeysEventListener() {
     document.addEventListener("keydown", (e) => {
-      console.log("🚀 ~ document.addEventListener ~ e:", e);
+      // console.log("🚀 ~ document.addEventListener ~ e:", e);
       // 监听 Ctrl + Alt + 数字 的快捷键
       if (e.ctrlKey && e.altKey && /^(Digit|Numpad)[0-9]$/.test(e.code)) {
         const match = e.code.match(/[0-9]$/);
@@ -380,6 +380,18 @@
           updateDropdown();
 
           console.log(`${N}快捷键: 已切换到模板 ${index}`);
+        }
+      }
+
+      // 清空聊天记录快捷键 Mac:Ctrl+L | Win:Alt+L
+      const isMac = navigator.userAgentData.platform === "macOS";
+      if ((isMac ? e.ctrlKey : e.altKey) && e.key.toLowerCase() === "l") {
+        if (confirm("确定要清空聊天记录吗？")) {
+          document
+            .querySelector(
+              'div[class^="PlaygroundChat-module__header"] button:has(.octicon-trash)'
+            )
+            ?.click();
         }
       }
     });
