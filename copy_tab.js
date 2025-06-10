@@ -180,6 +180,7 @@
       // Check if the appropriate shortcut key is pressed
       if (prefix && e.code === "KeyC") {
         e.preventDefault(); // Prevent default browser behavior
+        isMD = false;
         copyTitleAndUrl(); // Copy title and URL with toggled format (plain text/Markdown)
       } else if (prefix && e.code === "KeyU") {
         e.preventDefault(); // Prevent default browser behavior
