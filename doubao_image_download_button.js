@@ -118,9 +118,9 @@
       btn.click();
 
       // 点击原生的下载按钮（下载文件名为对话名）
-      // document
-      //   .querySelector('div[data-testid="edit_image_download_button"]')
-      //   ?.click();
+      document
+        .querySelector('div[data-testid="edit_image_download_button"]')
+        ?.click();
     }
 
     // 重新生成
@@ -135,6 +135,13 @@
     if (modifier && e.shiftKey && e.key.toLowerCase() === "d") {
       e.preventDefault();
       document.querySelector('div[class*="to-bottom-button"]')?.click();
+      // 点击最后一条聊天记录的第一张图
+      const chats = document.querySelectorAll(
+        'div[data-testid="receive_message"]'
+      );
+      const lastChat = chats[chats.length - 1];
+      lastChat?.focus();
+      lastChat?.querySelector('div[data-testid="mdbox_image"]')?.click();
     }
 
     // --------------------------------------------------- 以下快捷键需要离开输入域才触发
