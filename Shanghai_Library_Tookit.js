@@ -7,7 +7,7 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
 
-// @match        *://*.library.sh.cn/Record/*
+// @match        *://*.library.sh.cn/*
 // ==/UserScript==
 
 /* 功能说明
@@ -22,26 +22,11 @@
   console.log(`${N}油猴脚本开始`);
 
   const list2yaml = (arr) => arr.map((c) => `  - ${c}`).join(`\n`);
-
+  const currentUrl = window.location.href;
+  const getUrl = () => window.location.href;
   // -------------------------------------------------- common - END
 
   // -------------------------------------------------- Copy Meta - START
-  // 在当前页面添加复制信息按钮，点击即把信息复制到剪切板。
-  const button = document.createElement("button");
-  button.innerText = "Copy Meta";
-  button.style.position = "fixed";
-  button.style.bottom = "1em";
-  button.style.right = "1em";
-  button.style.zIndex = "1000";
-  button.style.padding = "1em";
-  button.style.backgroundColor = "#06FC";
-  button.style.color = "#fff";
-  button.style.border = "none";
-  button.style.borderRadius = "1em";
-  button.style.cursor = "pointer";
-
-  document.body.appendChild(button);
-
   const meta2md = () => {
     // 读取书名
     let title = document.querySelector(".media-body>h3").textContent.trim();
@@ -108,9 +93,9 @@
 Title: "${title}"
 Author:
 ${list2yaml(authorList)}
-Publisher: ${metaDict["出版社"]}
+Publisher: ${metaDict["出版社"] || metaDict["Published"]}
 ISBN: "${metaDict["ISBN"]}"
-索书号: ${metaDict["索书号"]}
+索书号: ${metaDict["索书号"] || metaDict["Call Number"]}
 上图网址: ${url}
 tags: 
 ${contributorMeta}
@@ -125,7 +110,25 @@ ${contributorMeta}
     navigator.clipboard.writeText(frontMatter);
   };
 
-  button.addEventListener("click", meta2md);
+  if (currentUrl.includes("library.sh.cn/Record")) {
+    // 在当前页面添加复制信息按钮，点击即把信息复制到剪切板。
+    const button = document.createElement("button");
+    button.innerText = "Copy Meta";
+    button.style.position = "fixed";
+    button.style.bottom = "1em";
+    button.style.right = "1em";
+    button.style.zIndex = "1000";
+    button.style.padding = "1em";
+    button.style.backgroundColor = "#06FC";
+    button.style.color = "#fff";
+    button.style.border = "none";
+    button.style.borderRadius = "1em";
+    button.style.cursor = "pointer";
+
+    document.body.appendChild(button);
+
+    button.addEventListener("click", meta2md);
+  }
   // -------------------------------------------------- Copy Meta - END
 
   // -------------------------------------------------- Observer - START
@@ -166,7 +169,6 @@ ${contributorMeta}
   const showAllAvailable = (btn) => {
     btn.click();
   };
-  observe_and_run(getAllBtn, showAllAvailable);
 
   const libSelector = ".holdings-tab .branch";
   const hideUnavailable = (lib) => {
@@ -198,10 +200,64 @@ ${contributorMeta}
       if (!libAvailable) lib.setAttribute("available", false);
     }
   };
-  observe_and_run(libSelector, hideUnavailable, false);
 
-  GM_addStyle(`
-*[available="false"]{opacity:.5;}
-    `);
+  if (currentUrl.includes("library.sh.cn/Record")) {
+    // click show all available btn
+    observe_and_run(getAllBtn, showAllAvailable);
+
+    // hide unavailable
+    observe_and_run(libSelector, hideUnavailable, false);
+    GM_addStyle(`*[available="false"]{opacity:.5;}`);
+  }
+
   // -------------------------------------------------- Get Available - END
+
+  // -------------------------------------------------- Add External Link - START
+  // titleDict = {urlKeyword: titleSelector}
+  const titleDict = {
+    // 搜索结果
+    "https://vufind.library.sh.cn/Search/Results": ".result-body a.title",
+    // 借阅排行榜
+    "https://www.library.sh.cn/info/billboard": "dt.book-info",
+    // 书籍详情
+    "library.sh.cn/Record": ".media-body>h3",
+    // 我的借阅
+    "https://www.library.sh.cn/myLibrary/borrowBooks": ".c-title>.name",
+  };
+
+  let titleSelector = titleDict[currentUrl];
+  if (!titleSelector) {
+    for (let [key, value] of Object.entries(titleDict)) {
+      if (currentUrl.includes(key)) {
+        titleSelector = value;
+        break;
+      }
+    }
+  }
+
+  if (titleSelector) {
+    const addExternalLink = (titleDom) => {
+      const title = titleDom.textContent.trim();
+      console.log("🚀 ~ title:", title);
+      const doubanUrl = `https://search.douban.com/book/subject_search?search_text=${title}&cat=1001`;
+      const zlibUrl = `https://z-library.sk/s/?q=${title}`;
+      const link = `<div class="external-link">
+<a href="${doubanUrl}">豆瓣</a> <a href="${zlibUrl}">Z-Lib</a>
+</div>`;
+      console.debug(`${N} 🚨 link:`, link);
+      titleDom.insertAdjacentHTML("beforeend", link);
+    };
+    observe_and_run(titleSelector, addExternalLink, false);
+
+    GM_addStyle(`
+.external-link a {
+display:inline-block;
+font-size: 14px;
+padding: 4px 8px;
+margin: 0 4px 4px 0; 
+border-radius: 9em; 
+background: #0f03;
+}`);
+  }
+  // -------------------------------------------------- Add External Link - END
 })();
