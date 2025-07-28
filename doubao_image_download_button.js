@@ -97,7 +97,7 @@
     const modifier = isMac ? e.ctrlKey : e.altKey;
 
     // 复制文本
-    let text = "重新生成20张比例9:16。";
+    let text = "重新生成36张比例9:16。";
     // Windows: Alt+V
     if (modifier && e.key.toLowerCase() === "v") {
       navigator.clipboard.writeText(text);
@@ -157,18 +157,18 @@
       return;
 
     // 左按钮: Shift+Left
-    if (e.key === "ArrowLeft" || e.code === "ArrowLeft") {
-      document
-        .querySelector('div[class*="left-icon"][class*="icon-wrapper"]')
-        ?.click();
-    }
+    // if (e.key === "ArrowLeft" || e.code === "ArrowLeft") {
+    //   document
+    //     .querySelector('div[class*="left-icon"][class*="icon-wrapper"]')
+    //     ?.click();
+    // }
 
     // 右按钮: Shift+Right
-    if (e.key === "ArrowRight" || e.code === "ArrowRight") {
-      document
-        .querySelector('div[class*="right-icon"][class*="icon-wrapper"]')
-        ?.click();
-    }
+    // if (e.key === "ArrowRight" || e.code === "ArrowRight") {
+    //   document
+    //     .querySelector('div[class*="right-icon"][class*="icon-wrapper"]')
+    //     ?.click();
+    // }
   });
 
   // 让缩略图可以被Vimnium点击 -------------------------------- START
