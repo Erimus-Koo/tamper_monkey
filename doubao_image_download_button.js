@@ -97,14 +97,14 @@
     const modifier = isMac ? e.ctrlKey : e.altKey;
 
     // 复制文本
-    let text = "重新生成36张比例9:16。";
+    let text = "重新生成20张比例9:16。";
     // Windows: Alt+V
     if (modifier && e.key.toLowerCase() === "v") {
       navigator.clipboard.writeText(text);
     }
 
-    text += "所有图全都按如下要求修改：";
     if (modifier && e.shiftKey && e.key.toLowerCase() === "v") {
+      text = "重新生成36张比例9:16。";
       navigator.clipboard.writeText(text);
     }
 
