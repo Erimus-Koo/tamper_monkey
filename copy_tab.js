@@ -24,6 +24,26 @@
 
   let isMD = false; // 切换复制模式的标记
 
+  // 工具函数：过滤 URL 参数
+  function filterUrlParams(url, keepKeys = []) {
+    // 拆分url和查询参数
+    const [base, search = ""] = url.split("?");
+    if (!search) return url; // 没有参数，直接返回
+
+    const params = new URLSearchParams(search);
+
+    // 构建新参数
+    const newParams = new URLSearchParams();
+    keepKeys.forEach((key) => {
+      if (params.has(key)) {
+        newParams.set(key, params.get(key));
+      }
+    });
+
+    const paramString = newParams.toString();
+    return paramString ? `${base}?${paramString}` : base;
+  }
+
   // 排除规则函数：处理特殊网站链接的参数
   function formatData() {
     const currentUrl = window.location.href;
@@ -45,7 +65,13 @@
       return { title: title, url: url.split("?")[0] }; // 移除 ? 后面的参数
     }
 
-    return { title: title, url: url }; // 默认返回原 URL
+    // 清空淘宝追踪码
+    const taobaoDomains = ["item.taobao.com", "detail.tmall.com"];
+    if (taobaoDomains.some((domain) => currentUrl.includes(domain))) {
+      url = filterUrlParams(url, ["id"]);
+    }
+
+    https: return { title: title, url: url }; // 默认返回原 URL
   }
 
   // 创建全局浮窗容器
@@ -161,7 +187,7 @@
     await copyToClipboard(textToCopy, isMD ? "Markdown" : "Plain Text");
 
     // 切换格式状态
-    isMD = !isMD;
+    // isMD = !isMD;
   }
 
   // 仅复制链接的主逻辑
