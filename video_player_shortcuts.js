@@ -358,12 +358,14 @@ z: 播放恢复原速
     // 跳过黑名单的域名
     if (blacklist.some((kw) => window.location.href.includes(kw))) return;
 
-    // 观察新添加的video元素
-    observeVideos();
+    if (!window.href.includes("youtube.com/shorts")) {
+      // 观察新添加的video元素
+      observeVideos();
 
-    // 使用MutationObserver观察新添加的video元素
-    const observer = new MutationObserver(observeVideos);
-    observer.observe(document.body, { childList: true, subtree: true });
+      // 使用MutationObserver观察新添加的video元素
+      const observer = new MutationObserver(observeVideos);
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
 
     // 添加快捷键监听
     document.addEventListener("keydown", (e) => pressKeyDown(e));
