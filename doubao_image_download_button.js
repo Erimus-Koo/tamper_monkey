@@ -89,6 +89,41 @@
   // 挂载到页面
   document.body.appendChild(btn);
 
+  // 点击删除对话按钮
+  const deleteChat = () => {
+    // 点击更多按钮
+    const moreBtns = document.querySelectorAll(
+      'button[data-testid="message_action_more"]'
+    );
+    if (!moreBtns) return;
+    moreBtns[moreBtns.length - 1]?.click();
+
+    // 点击二级菜单中的删除 这个不是标准按钮 需要patch
+    setTimeout(() => {
+      const li = document.querySelector(
+        'ul.semi-dropdown-menu li[class*="color-danger-"]'
+      );
+      if (li) {
+        // 模拟事件序列
+        ["mouseover", "mousedown", "mouseup", "click"].forEach((type) => {
+          li.dispatchEvent(
+            new MouseEvent(type, {
+              bubbles: true,
+              cancelable: true,
+              view: window,
+            })
+          );
+        });
+      }
+    }, 500);
+
+    // 点击确认
+    setTimeout(() => {
+      const confirmBtn = document.querySelector("button.semi-button-danger");
+      confirmBtn?.focus();
+    }, 1000);
+  };
+
   // 快捷键触发（Ctrl+Q 或 Alt+Q），避免输入域中误触发
   document.addEventListener("keydown", function (e) {
     // console.log("🚀 ~ e:", e);
@@ -142,6 +177,11 @@
       const lastChat = chats[chats.length - 1];
       lastChat?.focus();
       lastChat?.querySelector('div[data-testid="mdbox_image"]')?.click();
+    }
+
+    // 删除最后一条聊天
+    if (modifier && e.key.toLowerCase() === "x") {
+      deleteChat();
     }
 
     // --------------------------------------------------- 以下快捷键需要离开输入域才触发
