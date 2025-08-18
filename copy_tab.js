@@ -62,7 +62,8 @@
 
     // 移除 Bilibili 的追踪参数
     if (currentUrl.includes("bilibili.com/video")) {
-      return { title: title, url: url.split("?")[0] }; // 移除 ? 后面的参数
+      title = title.replace("_哔哩哔哩_bilibili", "");
+      url = filterUrlParams(url, ["p"]);
     }
 
     // 清空淘宝追踪码
