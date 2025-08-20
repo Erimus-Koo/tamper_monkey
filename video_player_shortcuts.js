@@ -356,9 +356,9 @@ z: 播放恢复原速
     // console.debug("Init:", document.URL);
 
     // 跳过黑名单的域名
-    if (blacklist.some((kw) => window.location.href.includes(kw))) return;
+    if (blacklist.some((kw) => window.location.href?.includes(kw))) return;
 
-    if (!window.href.includes("youtube.com/shorts")) {
+    if (!window.location.href?.includes("youtube.com/shorts")) {
       // 观察新添加的video元素
       observeVideos();
 
