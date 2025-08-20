@@ -245,7 +245,7 @@ ${contributorMeta}
 <a href="${doubanUrl}">豆瓣</a> <a href="${zlibUrl}">Z-Lib</a>
 </div>`;
       console.debug(`${N} 🚨 link:`, link);
-      titleDom.insertAdjacentHTML("beforeend", link);
+      titleDom.insertAdjacentHTML("afterend", link);
     };
     observe_and_run(titleSelector, addExternalLink, false);
 
