@@ -93,7 +93,7 @@
   const deleteChat = () => {
     // 点击更多按钮
     const moreBtns = document.querySelectorAll(
-      'button[data-testid="message_action_more"]'
+      '*[data-testid="message_action_more"]'
     );
     if (!moreBtns) return;
     moreBtns[moreBtns.length - 1]?.click();
@@ -101,7 +101,7 @@
     // 点击二级菜单中的删除 这个不是标准按钮 需要patch
     setTimeout(() => {
       const li = document.querySelector(
-        'ul.semi-dropdown-menu li[class*="color-danger-"]'
+        'ul.semi-dropdown-menu li[class*="danger"]'
       );
       if (li) {
         // 模拟事件序列
