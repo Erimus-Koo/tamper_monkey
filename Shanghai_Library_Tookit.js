@@ -180,18 +180,34 @@ ${contributorMeta}
           //skip table header
           if (i != 0) {
             const td = tr.querySelectorAll("td");
-            if (
-              (td[2].textContent.includes("外借") ||
-                td[2].textContent.includes(
-                  "Reference Circulation Collection"
-                )) &&
-              (td[3].textContent.includes("已归还") ||
-                td[3].textContent.includes("Available"))
-            ) {
+            let hasLoan = false;
+            let hasReturned = false;
+            let hasReserve = false;
+
+            // 遍历每个td，检查文本内容
+            td.forEach((cell) => {
+              const text = cell.textContent;
+              if (
+                text.includes("外借") ||
+                text.includes("Reference Circulation Collection")
+              ) {
+                hasLoan = true;
+              }
+              if (text.includes("已归还") || text.includes("Available")) {
+                hasReturned = true;
+              }
+              if (
+                text.includes("预约") ||
+                text.toLowerCase().includes("reserve")
+              ) {
+                hasReserve = true;
+              }
+            });
+
+            // 满足条件即 available
+            if ((hasLoan && hasReturned) || hasReserve) {
               libAvailable = true;
               locAvailable = true;
-            } else {
-              tr.setAttribute("available", false);
             }
           }
         });
