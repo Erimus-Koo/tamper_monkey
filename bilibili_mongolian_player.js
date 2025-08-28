@@ -304,13 +304,19 @@ m: 静音
       console.debug(`${N}isLastVideo:`, isLastVideo);
 
       // 点击删除
+      const displayThenClick = (delBtn) => {
+        if (delBtn) {
+          delBtn.style.display = "block"; // 或根据实际需求 restore 原样式
+          delBtn.click();
+        }
+      };
       let deletedLastVideo = false;
       if (videoType == "single") {
-        currentP.querySelector(".del-btn")?.click();
+        displayThenClick(currentP.querySelector(".del-btn"));
         deletedLastVideo = true;
       } else if (videoType == "multi") {
         if (isLastSubP) {
-          currentP.querySelector(".del-btn")?.click();
+          displayThenClick(currentP.querySelector(".del-btn"));
         } else {
           currentSubP.nextElementSibling.click();
         }
