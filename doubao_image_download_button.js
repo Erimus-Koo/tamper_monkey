@@ -92,8 +92,10 @@
   // 点击删除对话按钮
   const deleteChat = () => {
     // 点击更多按钮
-    const moreBtns = document.querySelectorAll(
-      '*[data-testid="message_action_more"]'
+    const moreBtns = Array.from(
+      document.querySelectorAll(
+        '[data-testid="message_action_bar"].opacity-100 [data-testid="message_action_more"]'
+      )
     );
     if (!moreBtns) return;
     moreBtns[moreBtns.length - 1]?.click();
