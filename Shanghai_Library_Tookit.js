@@ -224,6 +224,10 @@ ${contributorMeta}
     // hide unavailable
     observe_and_run(libSelector, hideUnavailable, false);
     GM_addStyle(`*[available="false"]{opacity:.5;}`);
+    // 点击预约后出现的弹窗 被嵌套在场馆里 需要特殊处理让它不透明
+    GM_addStyle(
+      `*[available="false"]:has(#placeHoldRemind[style="display: block;"]){opacity:1;}`
+    );
   }
 
   // -------------------------------------------------- Get Available - END
