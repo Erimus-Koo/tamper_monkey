@@ -123,7 +123,7 @@
     setTimeout(() => {
       const confirmBtn = document.querySelector("button.semi-button-danger");
       confirmBtn?.focus();
-    }, 1000);
+    }, 500);
   };
 
   // 快捷键触发（Ctrl+Q 或 Alt+Q），避免输入域中误触发
