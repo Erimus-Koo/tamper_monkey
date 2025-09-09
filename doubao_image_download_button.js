@@ -172,13 +172,27 @@
     if (modifier && e.shiftKey && e.key.toLowerCase() === "d") {
       e.preventDefault();
       document.querySelector('div[class*="to-bottom-button"]')?.click();
-      // 点击最后一条聊天记录的第一张图
+      // 点击最后一条聊天记录的第一张可见图
       const chats = document.querySelectorAll(
         'div[data-testid="receive_message"]'
       );
       const lastChat = chats[chats.length - 1];
       lastChat?.focus();
-      lastChat?.querySelector('div[data-testid="mdbox_image"]')?.click();
+
+      if (lastChat) {
+        const images = lastChat.querySelectorAll(
+          'div[data-testid="mdbox_image"]'
+        );
+        for (const imgDiv of images) {
+          // 判断可见性
+          const rect = imgDiv.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            imgDiv.click();
+            // console.log("imgDiv:", imgDiv, imgDiv.offsetParent);
+            break; // 只点击第一个可见的
+          }
+        }
+      }
     }
 
     // 删除最后一条聊天
