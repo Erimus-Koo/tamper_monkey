@@ -239,11 +239,9 @@ z: 播放恢复原速
 
     // 如果光标在输入框里，快捷键不生效
     if (
+      e.target.isContentEditable ||
       e.target.tagName === "TEXTAREA" ||
-      (e.target.tagName === "INPUT" &&
-        ["text", "password", "url", "search", "tel", "email"].includes(
-          e.target.type
-        ))
+      e.target.tagName === "INPUT"
     )
       return;
 
