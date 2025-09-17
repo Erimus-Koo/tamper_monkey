@@ -72,6 +72,13 @@
       url = filterUrlParams(url, ["id"]);
     }
 
+    // 推特 X
+    const twitterDomains = ["t.co", "x.com"];
+    if (twitterDomains.some((domain) => currentUrl.includes(domain))) {
+      const pattern = /^(\(\d+\)\s*)?X 上的 (.*?) \/ X$/gm;
+      title = title.replace(pattern, "$2");
+    }
+
     https: return { title: title, url: url }; // 默认返回原 URL
   }
 
