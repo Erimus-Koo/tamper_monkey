@@ -134,14 +134,14 @@
     const modifier = isMac ? e.ctrlKey : e.altKey;
 
     // 复制文本
-    let text = "重新生成20张比例9:16。";
+    let text = "重新生成20张，比例 「9:16」";
     // Windows: Alt+V
     if (modifier && e.key.toLowerCase() === "v") {
       navigator.clipboard.writeText(text);
     }
 
     if (modifier && e.shiftKey && e.key.toLowerCase() === "v") {
-      text = "重新生成36张比例9:16。";
+      text = "重新生成36张，比例 「9:16」";
       navigator.clipboard.writeText(text);
     }
 
@@ -265,4 +265,10 @@
 
   observer.observe(document.body, { childList: true, subtree: true });
   // 让缩略图可以被Vimnium点击 -------------------------------- END
+
+  // 自动点击图片生成 -------------------------------- START
+  if (location.href.replace(/\/$/, "") === "https://www.doubao.com/chat") {
+    window.location.href = "https://www.doubao.com/chat/create-image";
+  }
+  // 自动点击图片生成 -------------------------------- END
 })();
