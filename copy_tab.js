@@ -72,6 +72,18 @@
       url = filterUrlParams(url, ["id"]);
     }
 
+    // 推特 X
+    const twitterDomains = ["t.co", "x.com"];
+    if (twitterDomains.some((domain) => currentUrl.includes(domain))) {
+      const pattern = /^(\(\d+\)\s*)?X 上的 (.*?) \/ X$/gm;
+      title = title.replace(pattern, "$2");
+      // 去除title中的引号（人名：「内容」 变成 人名：内容）
+      const parts = title.split("：", 2); // 只取第一个分隔符
+      if (parts.length === 2) {
+        title = parts[0] + "：" + parts[1].trim().replace(/^[「]+|[」]+$/g, "");
+      }
+    }
+
     https: return { title: title, url: url }; // 默认返回原 URL
   }
 
