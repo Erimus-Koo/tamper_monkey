@@ -89,24 +89,44 @@
   // 挂载到页面
   document.body.appendChild(btn);
 
+  // 获取鼠标坐标 用于删除当前对话
+  let mouseX = 0,
+    mouseY = 0;
+  document.addEventListener("mousemove", (e) => {
+    // mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
   // 点击删除对话按钮
   const deleteChat = () => {
-    // 点击更多按钮
-    const moreBtns = Array.from(
-      document.querySelectorAll(
-        '[data-testid="message_action_bar"].opacity-100 [data-testid="message_action_more"]'
-      )
+    // 获取所有外框（从后向前）
+    const blocks = Array.from(
+      document.querySelectorAll('div[data-testid="message-block-container"]')
     );
-    if (!moreBtns) return;
-    moreBtns[moreBtns.length - 1]?.click();
+    console.log("🚀 ~ deleteChat ~ blocks:", blocks);
+    let targetBlock = null;
+    for (let i = blocks.length - 1; i >= 0; i--) {
+      const rect = blocks[i].getBoundingClientRect();
+      if (mouseY >= rect.top && mouseY <= rect.bottom) {
+        targetBlock = blocks[i];
+        console.log("🚀 ~ deleteChat ~ targetBlock:", targetBlock);
+        break;
+      }
+    }
+    if (!targetBlock) return;
 
-    // 点击二级菜单中的删除 这个不是标准按钮 需要patch
+    // 找到外框里的 more 按钮并点击
+    const moreBtn = targetBlock.querySelector(
+      '[data-testid="message_action_bar"].opacity-100 [data-testid="message_action_more"]'
+    );
+    if (!moreBtn) return;
+    moreBtn.click();
+
+    // 点击二级菜单中的删除
     setTimeout(() => {
       const li = document.querySelector(
         'ul.semi-dropdown-menu li[class*="danger"]'
       );
       if (li) {
-        // 模拟事件序列
         ["mouseover", "mousedown", "mouseup", "click"].forEach((type) => {
           li.dispatchEvent(
             new MouseEvent(type, {
