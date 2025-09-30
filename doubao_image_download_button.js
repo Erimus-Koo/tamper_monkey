@@ -102,13 +102,11 @@
     const blocks = Array.from(
       document.querySelectorAll('div[data-testid="message-block-container"]')
     );
-    console.log("🚀 ~ deleteChat ~ blocks:", blocks);
     let targetBlock = null;
     for (let i = blocks.length - 1; i >= 0; i--) {
       const rect = blocks[i].getBoundingClientRect();
       if (mouseY >= rect.top && mouseY <= rect.bottom) {
         targetBlock = blocks[i];
-        console.log("🚀 ~ deleteChat ~ targetBlock:", targetBlock);
         break;
       }
     }
@@ -116,7 +114,7 @@
 
     // 找到外框里的 more 按钮并点击
     const moreBtn = targetBlock.querySelector(
-      '[data-testid="message_action_bar"].opacity-100 [data-testid="message_action_more"]'
+      '[data-testid="message_action_bar"] [data-testid="message_action_more"]'
     );
     if (!moreBtn) return;
     moreBtn.click();
