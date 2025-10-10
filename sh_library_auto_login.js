@@ -52,9 +52,7 @@
       if (savedPassword) passwordField.value = savedPassword;
 
       // 自动勾选“隐私协议”
-      if (privacyCheckbox && !privacyCheckbox.checked) {
-        privacyCheckbox.click();
-      }
+      privacyCheckbox?.click();
 
       // 聚焦验证码输入框
       captchaField.focus();
