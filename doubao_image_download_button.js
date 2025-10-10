@@ -114,10 +114,10 @@
 
     // 找到外框里的 more 按钮并点击
     const moreBtn = targetBlock.querySelector(
-      '[data-testid="message_action_bar"] [data-testid="message_action_more"]'
+      '[data-testid="message_action_bar"] [aria-haspopup="menu"]'
     );
     if (!moreBtn) return;
-    moreBtn.click();
+    moreBtn.click(); // TODO 无效 需更新
 
     // 点击二级菜单中的删除
     setTimeout(() => {
