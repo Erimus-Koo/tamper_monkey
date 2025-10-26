@@ -94,6 +94,7 @@ Title: "${title}"
 Author:
 ${list2yaml(authorList)}
 Publisher: ${metaDict["出版社"] || metaDict["Published"]}
+Publication Date: ${metaDict["出版时间"] || metaDict["Publication Dates"]}
 ISBN: "${metaDict["ISBN"]}"
 索书号: ${metaDict["索书号"] || metaDict["Call Number"]}
 上图网址: ${url}
