@@ -114,7 +114,7 @@
 
     // 找到外框里的 more 按钮并点击
     const moreBtn = targetBlock.querySelector(
-      '[data-testid="message_action_bar"] [aria-haspopup="menu"]'
+      '[data-testid="message_action_more"]'
     );
     if (!moreBtn) return;
     moreBtn.click(); // TODO 无效 需更新
