@@ -190,7 +190,8 @@ ${contributorMeta}
               const text = cell.textContent;
               if (
                 text.includes("外借") ||
-                text.includes("Reference Circulation Collection")
+                text.includes("Reference Circulation Collection") ||
+                text.includes("General loan materials")
               ) {
                 hasLoan = true;
               }
