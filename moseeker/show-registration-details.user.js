@@ -827,6 +827,12 @@
         registrationTime = cells[timeIndex].textContent.trim();
       }
 
+      // 先清除该单元格内已有的注入内容（防止重复注入）
+      const existingInjected = nameCell.querySelectorAll(
+        '[data-injected="true"], .injected-details'
+      );
+      existingInjected.forEach((el) => el.remove());
+
       // 创建占位符
       const detailsDiv = document.createElement("div");
       detailsDiv.className = "injected-details";
@@ -1068,15 +1074,17 @@
       return;
     }
 
-    // 首次更新数据并注入
-    await injectDetailsToTable(eventId);
-
-    // 创建控制面板
-    createControlPanel(eventId);
-
     // 监听表格变化，自动重新注入（使用防抖）
     let debounceTimer = null;
     let isInjecting = false; // 防止注入过程中触发新的注入
+
+    // 首次更新数据并注入
+    isInjecting = true;
+    await injectDetailsToTable(eventId);
+    isInjecting = false;
+
+    // 创建控制面板
+    createControlPanel(eventId);
 
     const observer = new MutationObserver((mutations) => {
       console.log(`[Observer] 检测到 ${mutations.length} 个变化`);
