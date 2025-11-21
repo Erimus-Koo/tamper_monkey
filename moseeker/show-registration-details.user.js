@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MoSeeker 活动报名详情同步
 // @namespace    http://tampermonkey.net/
-// @version      1.0.0
+// @version      1.0.1
 // @description  自动获取并显示 MoSeeker 活动报名者的详细信息（公司、职位）
 // @author       Erimus
 // @match        https://hr.moseeker.com/v3/activity/*/signup*
@@ -790,13 +790,9 @@
     console.log("[Inject] 更新数据...");
     await updateData(eventId);
 
-    // 重新加载缓存（可能已更新）
-    const updatedCache = new EventDataCache(eventId);
-
-    // 注入详情
-    console.log("[Inject] 开始注入详情");
-    let injectedCount = 0;
-    const names = [];
+    // 注入详情 - 异步并行处理
+    console.log("[Inject] 开始注入详情（异步并行）");
+    const injectionTasks = [];
 
     rows.forEach((row, rowIndex) => {
       const cells = row.querySelectorAll("td");
@@ -824,58 +820,101 @@
       // 获取清理后的文本
       name = clonedCell.textContent.trim();
 
-      names.push(name);
       console.log(`[Inject] 行 ${rowIndex}: 姓名="${name}"`);
 
       let registrationTime = null;
       if (hasTimeColumn && timeIndex < cells.length) {
         registrationTime = cells[timeIndex].textContent.trim();
-        console.log(`[Inject] 行 ${rowIndex}: 报名时间="${registrationTime}"`);
       }
 
-      // 查找报名信息（使用更新后的缓存）
-      const info = updatedCache.findByName(name, registrationTime);
-
-      if (!info) {
-        console.warn(`[Inject] 行 ${rowIndex}: ❌ 未找到 ${name} 的信息`);
-        return;
-      }
-
-      console.log(`[Inject] 行 ${rowIndex}: ✅ 找到信息:`, info);
-
-      // 创建详情元素
+      // 创建占位符
       const detailsDiv = document.createElement("div");
       detailsDiv.className = "injected-details";
-      detailsDiv.setAttribute("data-injected", "true"); // 添加标识
+      detailsDiv.setAttribute("data-injected", "true");
       detailsDiv.style.cssText = `
         font-size: 12px;
-        color: #666;
+        color: #999;
         margin-top: 4px;
         line-height: 1.5;
       `;
-
-      if (info.duplicate) {
-        detailsDiv.innerHTML = `⚠️ 存在 ${info.count} 个重名用户`;
-        detailsDiv.style.color = "#f56c6c";
-        console.log(`[Inject] 行 ${rowIndex}: ⚠️ 重名用户`);
-      } else {
-        const company = info.company || "未填写";
-        const position = info.position || "未填写";
-        detailsDiv.innerHTML = `
-          <div style="padding:0 12px">
-            ${company} | ${position}
-          </div>
-        `;
-        console.log(`[Inject] 行 ${rowIndex}: 注入 ${company} - ${position}`);
-      }
-
+      detailsDiv.innerHTML = `<div style="padding:0 12px">⏳ 加载中...</div>`;
       nameCell.appendChild(detailsDiv);
-      injectedCount++;
+
+      // 异步处理每一行
+      const task = (async () => {
+        try {
+          // 先尝试从缓存获取
+          let info = cache.findByName(name, registrationTime);
+
+          if (info) {
+            console.log(`💾 [Inject] 行 ${rowIndex}: 从缓存获取 ${name}`);
+          } else {
+            // 缓存没有，从API获取
+            console.log(`🌐 [Inject] 行 ${rowIndex}: 从API获取 ${name}`);
+            detailsDiv.innerHTML = `<div style="padding:0 12px; color: #409eff;">🌐 加载中...</div>`;
+
+            // 获取报名列表找到ID
+            const list = await getRegistrationList(eventId, 1, 1000);
+            if (list.success) {
+              const reg = list.list.find((r) => r.name === name);
+              if (reg) {
+                const details = await getRegistrationDetails(reg.id);
+                if (details) {
+                  // 保存到缓存
+                  const cacheData = cache.get() || {
+                    eventId,
+                    lastUpdate: new Date().toISOString(),
+                    registrations: {},
+                  };
+                  cacheData.registrations[reg.id] = details;
+                  cache.save(cacheData);
+
+                  info = {
+                    name: details.name,
+                    company: details.company,
+                    position: details.position,
+                    duplicate: false,
+                  };
+                }
+              }
+            }
+          }
+
+          if (!info) {
+            detailsDiv.innerHTML = `<div style="padding:0 12px; color: #f56c6c;">❌ 加载失败</div>`;
+            console.warn(`[Inject] 行 ${rowIndex}: ❌ 未找到 ${name} 的信息`);
+            return;
+          }
+
+          // 更新显示
+          if (info.duplicate) {
+            detailsDiv.innerHTML = `⚠️ 存在 ${info.count} 个重名用户`;
+            detailsDiv.style.color = "#f56c6c";
+          } else {
+            const company = info.company || "未填写";
+            const position = info.position || "未填写";
+            detailsDiv.innerHTML = `
+              <div style="padding:0 12px">
+                ${company} | ${position}
+              </div>
+            `;
+            detailsDiv.style.color = "#666";
+          }
+
+          console.log(`[Inject] 行 ${rowIndex}: ✅ 注入成功 ${name}`);
+        } catch (error) {
+          console.error(`[Inject] 行 ${rowIndex}: 异常`, error);
+          detailsDiv.innerHTML = `<div style="padding:0 12px; color: #f56c6c;">❌ 加载异常</div>`;
+        }
+      })();
+
+      injectionTasks.push(task);
     });
 
+    // 等待所有任务完成
+    console.log(`[Inject] 等待 ${injectionTasks.length} 个任务完成...`);
+    await Promise.all(injectionTasks);
     console.log(`[Inject] ========== 注入完成 ==========`);
-    console.log(`[Inject] 总行数: ${rows.length}, 成功注入: ${injectedCount}`);
-    console.log(`[Inject] 所有姓名:`, names);
   }
 
   // ==================== 控制面板 ====================
@@ -915,27 +954,48 @@
       ? Object.keys(cacheData.registrations).length
       : 0;
 
+    // 创建简洁状态的HTML
     panel.innerHTML = `
-      <span style="color: #999;margin-right: 1rem">💾 存储详情 ${cacheCount} 条</span>
-      <button id="refresh-details-btn" style="
-        padding: 0 8px;
-        border: none;
-        cursor: pointer;
-        font-size: 12px;
-        background: none;
-        color: #999;
-      ">刷新</button>
-      <button id="clear-cache-btn" style="
-        padding: 0 8px;
-        border: none;
-        cursor: pointer;
-        font-size: 12px;
-        background: none;
-        color: #999;
-      ">清除</button>
+      <span id="panel-toggle" style="color: #999; cursor: pointer; user-select: none;">
+        💾 详情 ${cacheCount}
+      </span>
+      <span id="panel-actions" style="display: none; gap: 8px;">
+        <button id="refresh-details-btn" style="
+          padding: 0 8px;
+          border: none;
+          cursor: pointer;
+          font-size: 12px;
+          background: none;
+          color: #999;
+        ">刷新</button>
+        <button id="clear-cache-btn" style="
+          padding: 0 8px;
+          border: none;
+          cursor: pointer;
+          font-size: 12px;
+          background: none;
+          color: #999;
+        ">清除</button>
+      </span>
     `;
 
     targetContainer.appendChild(panel);
+
+    // 折叠/展开逻辑
+    const toggle = document.getElementById("panel-toggle");
+    const actions = document.getElementById("panel-actions");
+    let isExpanded = false;
+
+    toggle.addEventListener("click", () => {
+      isExpanded = !isExpanded;
+      if (isExpanded) {
+        toggle.textContent = `💾 存储详情 ${cacheCount} 条`;
+        actions.style.display = "flex";
+      } else {
+        toggle.textContent = `💾 详情 ${cacheCount}`;
+        actions.style.display = "none";
+      }
+    });
 
     // 绑定事件
     document
