@@ -549,8 +549,10 @@
       nameTimeIndex: {},
     };
 
-    const existingIds = new Set(Object.keys(cacheData.registrations));
-    console.log(`[Update] 缓存中已有 ${existingIds.size} 条记录`);
+    const existingIds = new Set(
+      Object.keys(cacheData.registrations).map((id) => parseInt(id, 10))
+    );
+    console.log(`💾 [Update] 缓存中已有 ${existingIds.size} 条记录`);
 
     // 快速检查：先获取第一页，看看总数是否变化
     console.log(`[Update] 快速检查：获取第一页...`);
@@ -594,6 +596,8 @@
           console.log(`[Update] ✅ 已获取 ${reg.name} 的详情`);
         }
         await sleep(100);
+      } else {
+        console.log(`💾 [Update] ${reg.name} (ID: ${reg.id}) 已在缓存中`);
       }
     }
 
@@ -626,6 +630,8 @@
           }
 
           await sleep(100);
+        } else {
+          console.log(`💾 [Update] ${reg.name} (ID: ${reg.id}) 已在缓存中`);
         }
       }
 
@@ -910,7 +916,7 @@
       : 0;
 
     panel.innerHTML = `
-      <span style="color: #999;margin-right: 1rem">📋 存储详情 ${cacheCount} 条</span>
+      <span style="color: #999;margin-right: 1rem">💾 存储详情 ${cacheCount} 条</span>
       <button id="refresh-details-btn" style="
         padding: 0 8px;
         border: none;
