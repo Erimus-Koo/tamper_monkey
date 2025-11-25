@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         MoSeeker 活动报名详情同步
 // @namespace    http://tampermonkey.net/
-// @version      1.0.1
+// @version      1.0.2
 // @description  自动获取并显示 MoSeeker 活动报名者的详细信息（公司、职位）
 // @author       Erimus
-// @match        https://hr.moseeker.com/v3/activity/*/signup*
+// @match        https://hr.moseeker.com/*
 // @grant        none
 // @run-at       document-end
 // ==/UserScript==
@@ -13,6 +13,12 @@
   "use strict";
 
   console.log("[MoSeeker Details Sync] 脚本加载");
+
+  // 目标页面正则（活动报名管理页面）
+  const TARGET_URL_PATTERN =
+    /^https:\/\/hr\.moseeker\.com\/v3\/activity\/\d+\/signup/;
+
+  let isActive = false;
 
   // ==================== 工具函数 ====================
 
@@ -1178,10 +1184,95 @@
     console.log("[MoSeeker Details Sync] 初始化完成");
   }
 
+  // 检查当前 URL 是否匹配
+  function isTargetPage() {
+    return TARGET_URL_PATTERN.test(window.location.href);
+  }
+
+  // 启动脚本
+  async function startScript() {
+    if (isActive) return;
+
+    console.log("[MoSeeker Details Sync] 📍 进入目标页面，启动脚本");
+    isActive = true;
+    await main();
+  }
+
+  // 停止脚本
+  function stopScript() {
+    if (!isActive) return;
+
+    console.log("[MoSeeker Details Sync] 📍 离开目标页面，停止脚本");
+    isActive = false;
+
+    // 清除已注入的内容
+    clearInjectedDetails();
+
+    // 移除控制面板
+    const panel = document.getElementById("moseeker-details-control-panel");
+    if (panel) {
+      panel.remove();
+    }
+  }
+
+  // 检查并更新脚本状态
+  function checkAndUpdateScriptState() {
+    if (isTargetPage()) {
+      startScript();
+    } else {
+      stopScript();
+    }
+  }
+
+  // 监听 URL 变化（SPA 路由）
+  function watchUrlChange() {
+    // 监听 pushState 和 replaceState
+    const originalPushState = history.pushState;
+    const originalReplaceState = history.replaceState;
+
+    history.pushState = function (...args) {
+      originalPushState.apply(this, args);
+      console.log(
+        "[MoSeeker Details Sync] URL 变化 (pushState):",
+        window.location.href
+      );
+      checkAndUpdateScriptState();
+    };
+
+    history.replaceState = function (...args) {
+      originalReplaceState.apply(this, args);
+      console.log(
+        "[MoSeeker Details Sync] URL 变化 (replaceState):",
+        window.location.href
+      );
+      checkAndUpdateScriptState();
+    };
+
+    // 监听 popstate（浏览器前进/后退）
+    window.addEventListener("popstate", () => {
+      console.log(
+        "[MoSeeker Details Sync] URL 变化 (popstate):",
+        window.location.href
+      );
+      checkAndUpdateScriptState();
+    });
+
+    console.log("[MoSeeker Details Sync] ✅ URL 监听已启动");
+  }
+
+  // 初始化
+  function init() {
+    // 启动 URL 监听
+    watchUrlChange();
+
+    // 检查当前页面
+    checkAndUpdateScriptState();
+  }
+
   // 页面加载完成后执行
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", main);
+    document.addEventListener("DOMContentLoaded", init);
   } else {
-    main();
+    init();
   }
 })();
