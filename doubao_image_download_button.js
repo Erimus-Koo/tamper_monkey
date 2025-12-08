@@ -46,7 +46,7 @@
 
     // 选择器：data-testid和class都要匹配
     const img = container.querySelector(
-      'img[data-testid="in_painting_picture"][class^="preview-img"]'
+      'img[data-testid="in_painting_picture"]'
     );
     if (!img) {
       alert("未找到图片元素！");
