@@ -380,7 +380,8 @@ m: 静音
       btnList = btnList.concat(
         ".bili-dyn-card-video__mark", //稍后播
         ".relevant-topic-container__item", //话题
-        ".bili-dyn-list__notification" //列表顶部的有新动态
+        ".bili-dyn-list__notification", //列表顶部的有新动态
+        ".bili-dyn-list-notification" //列表顶部的有新动态
       );
     } else if (prop.name == "watchlater") {
       // 稍后再看播放页 右侧播放列表中的视频项
