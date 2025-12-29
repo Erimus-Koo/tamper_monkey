@@ -2,9 +2,11 @@
 // @name         Auto Scroll 自动滚屏
 // @description  Auto Scroll Pages (double click / ctrl+arrow / alt+arrow)
 // @include      *
-// @version      0.18
+// @version      0.19
 // @author       Erimus
-// @grant        none
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_registerMenuCommand
 // @namespace    https://greasyfork.org/users/46393
 // ==/UserScript==
 
@@ -17,6 +19,62 @@
     auto_scroll, // scroll function
     last_click = Date.now();
 
+  // 获取保存的停止时间
+  let getStopTime = () => GM_getValue("auto_scroll_stop_time", "");
+  let setStopTime = (time) => GM_setValue("auto_scroll_stop_time", time);
+
+  // 检查是否到达停止时间
+  let checkStopTime = () => {
+    let stopTime = getStopTime();
+    if (!stopTime) return false;
+
+    let now = new Date();
+    let currentTime =
+      now.getHours().toString().padStart(2, "0") +
+      ":" +
+      now.getMinutes().toString().padStart(2, "0");
+
+    if (currentTime === stopTime) {
+      console.log(`已到达设定时间 ${stopTime}，停止自动滚动`);
+      if (scrolling) {
+        scrolling = false;
+        clearInterval(auto_scroll);
+      }
+      return true;
+    }
+    return false;
+  };
+
+  // 配置停止时间的界面
+  let configStopTime = () => {
+    let currentTime = getStopTime();
+    let newTime = prompt(
+      "请输入停止滚动的时间 (24小时制，格式: HH:MM)\n例如: 19:00\n留空则取消定时停止功能",
+      currentTime
+    );
+
+    if (newTime === null) return; // 用户取消
+
+    if (newTime === "") {
+      setStopTime("");
+      alert("已取消定时停止功能");
+      return;
+    }
+
+    // 验证时间格式
+    let timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(newTime)) {
+      alert("时间格式错误，请使用 HH:MM 格式 (例如: 19:00)");
+      return;
+    }
+
+    setStopTime(newTime);
+    alert(`已设置停止时间为: ${newTime}`);
+  };
+
+  // 注册油猴菜单
+  GM_registerMenuCommand("设置停止时间", configStopTime);
+
   // main function
   let toggle_scroll = function (direction) {
     scrolling = !scrolling;
@@ -24,6 +82,10 @@
       console.log("Start scroll", direction);
       direction = direction == "up" ? -1 : 1;
       auto_scroll = setInterval(function () {
+        // 检查是否到达停止时间
+        if (checkStopTime()) {
+          return;
+        }
         document.documentElement.scrollTop += direction * scroll_distance;
       }, scroll_interval);
     } else {
