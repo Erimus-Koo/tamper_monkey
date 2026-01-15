@@ -11,22 +11,91 @@
 // ==/UserScript==
 
 (function (document) {
-  // speed controlled by the following 2 variables
-  let scroll_interval = 50, // every xx ms
-    scroll_distance = 1; // move xx pixel
+  // 获取保存的设置或默认值 (间隔,距离,隐藏滚动条[0:隐藏/1:显示],停止时间)
+  const getSettings = () => GM_getValue("auto_scroll_settings", "50,1,0,");
+
+  // 解析并初始化设置
+  let [scrollInterval, scrollDistance, hideScrollbar, stopTime] = (() => {
+    let s = getSettings().split(/[，,]/).map((item) => item.trim());
+    return [
+      parseInt(s[0]) || 50,
+      parseFloat(s[1]) || 1,
+      s[2] === "1" ? false : true, // 0或默认: 隐藏(true), 1: 显示(false)
+      s[3] || "",
+    ];
+  })();
 
   let scrolling = false, // status
-    auto_scroll, // scroll function
-    last_click = Date.now();
+    autoScroll, // scroll function
+    lastClick = Date.now(),
+    currentDirection = 1; // 记录当前方向用于无刷新更新
 
-  // 获取保存的停止时间
-  let getStopTime = () => GM_getValue("auto_scroll_stop_time", "");
-  let setStopTime = (time) => GM_setValue("auto_scroll_stop_time", time);
+  // hide scrollbar CSS
+  let styleElement;
+  const updateScrollbarVisibility = (hide) => {
+    if (!hideScrollbar) return;
+    if (hide) {
+      if (!styleElement) {
+        styleElement = document.createElement("style");
+        styleElement.id = "auto-scroll-hide-scrollbar";
+        styleElement.innerHTML = "::-webkit-scrollbar { display: none !important; }";
+      }
+      document.head.appendChild(styleElement);
+    } else if (styleElement && styleElement.parentNode) {
+      styleElement.parentNode.removeChild(styleElement);
+    }
+  };
+
+  // Toast notification
+  const showToast = (message) => {
+    const toast = document.createElement("div");
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #CC0;
+      color: #000;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 14px;
+      z-index: 10001;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none;
+      text-align: left;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    `;
+    toast.innerText = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      toast.style.transform = "translateY(-10px)";
+      setTimeout(() => toast.remove(), 300);
+    }, 5000);
+  };
+
+  // 获取/设置停止时间 (兼容旧版逻辑，但现在统一管理)
+  const getStopTime = () => stopTime;
+  const setStopTime = (time) => {
+    stopTime = time;
+    saveAllSettings();
+  };
+
+  const saveAllSettings = () => {
+    let hideValue = hideScrollbar ? "0" : "1"; // 存储 0:隐藏, 1:显示
+    GM_setValue(
+      "auto_scroll_settings",
+      `${scrollInterval},${scrollDistance},${hideValue},${stopTime}`
+    );
+  };
 
   // 检查是否到达停止时间
-  let checkStopTime = () => {
-    let stopTime = getStopTime();
-    if (!stopTime) return false;
+  const checkStopTime = () => {
+    let stopTimeVal = getStopTime();
+    if (!stopTimeVal) return false;
 
     let now = new Date();
     let currentTime =
@@ -34,70 +103,114 @@
       ":" +
       now.getMinutes().toString().padStart(2, "0");
 
-    if (currentTime === stopTime) {
-      console.log(`已到达设定时间 ${stopTime}，停止自动滚动`);
+    if (currentTime === stopTimeVal) {
+      console.log(`已到达设定时间 ${stopTimeVal}，停止自动滚动`);
       if (scrolling) {
-        scrolling = false;
-        clearInterval(auto_scroll);
+        stopScroll();
       }
       return true;
     }
     return false;
   };
 
-  // 配置停止时间的界面
-  let configStopTime = () => {
-    let currentTime = getStopTime();
-    let newTime = prompt(
-      "请输入停止滚动的时间 (24小时制，格式: HH:MM)\n例如: 19:00\n留空则取消定时停止功能",
-      currentTime
+  // 统一配置界面
+  const configAllSettings = () => {
+    const hideValue = hideScrollbar ? "0" : "1";
+    const current = `${scrollInterval},${scrollDistance},${hideValue},${stopTime}`;
+    const input = prompt(
+      "请编辑配置，格式: \n- 间隔ms (正整数)\n- 距离px (正数)\n- 滚动条[0:隐藏/1:显示]\n- 停止时间HH:MM (24小时制)\n\n例如: 50,1,0,19:00",
+      current
     );
 
-    if (newTime === null) return; // 用户取消
+    if (input === null) return;
 
-    if (newTime === "") {
-      setStopTime("");
-      alert("已取消定时停止功能");
+    const s = input.split(/[，,]/).map((item) => item.trim());
+
+    // 验证逻辑
+    const newInterval = parseInt(s[0]);
+    const newDistance = parseFloat(s[1]);
+    const newHideFlag = s[2];
+    const newStopTime = s[3] || "";
+    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+
+    let errors = [];
+    if (isNaN(newInterval) || newInterval <= 0) errors.push("间隔需为正整数");
+    if (isNaN(newDistance) || newDistance <= 0) errors.push("距离需为正数");
+    if (newHideFlag !== "0" && newHideFlag !== "1") errors.push("滚动条开关需为0或1");
+    if (newStopTime !== "" && !timeRegex.test(newStopTime)) errors.push("停止时间格式需为 HH:MM");
+
+    if (errors.length > 0) {
+      alert("配置错误：\n" + errors.join("\n"));
       return;
     }
 
-    // 验证时间格式
-    let timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(newTime)) {
-      alert("时间格式错误，请使用 HH:MM 格式 (例如: 19:00)");
-      return;
+    // 应用并保存
+    scrollInterval = newInterval;
+    scrollDistance = newDistance;
+    hideScrollbar = newHideFlag === "1" ? false : true;
+    stopTime = newStopTime;
+
+    saveAllSettings();
+
+    // 立即应用设置
+    if (scrolling) {
+      // 重新启动定时器以应用新的间隔或距离
+      clearInterval(autoScroll);
+      startInterval(currentDirection);
+      updateScrollbarVisibility(true);
+    } else {
+      updateScrollbarVisibility(false);
     }
 
-    setStopTime(newTime);
-    alert(`已设置停止时间为: ${newTime}`);
+    const statusMsg = `配置已更新：
+- 间隔: ${scrollInterval}ms
+- 距离: ${scrollDistance}px
+- 滚动条: ${hideScrollbar ? "隐藏" : "显示"}
+- 停止时间: ${stopTime || "无"}`;
+    console.log(statusMsg);
+    console.log("当前保存的设置字符串:", getSettings());
+    showToast(statusMsg);
   };
 
   // 注册油猴菜单
-  GM_registerMenuCommand("设置停止时间", configStopTime);
+  GM_registerMenuCommand("滚动参数设置", configAllSettings);
 
   // main function
-  let toggle_scroll = function (direction) {
-    scrolling = !scrolling;
-    if (scrolling) {
+  const toggleScroll = function (direction) {
+    if (!scrolling) {
+      scrolling = true;
+      updateScrollbarVisibility(true);
       console.log("Start scroll", direction);
-      direction = direction == "up" ? -1 : 1;
-      auto_scroll = setInterval(function () {
-        // 检查是否到达停止时间
-        if (checkStopTime()) {
-          return;
-        }
-        document.documentElement.scrollTop += direction * scroll_distance;
-      }, scroll_interval);
+      currentDirection = direction == "up" ? -1 : 1;
+      startInterval(currentDirection);
     } else {
+      stopScroll();
+    }
+  };
+
+  const startInterval = (direction) => {
+    autoScroll = setInterval(function () {
+      // 检查是否到达停止时间
+      if (checkStopTime()) {
+        return;
+      }
+      document.documentElement.scrollTop += direction * scrollDistance;
+    }, scrollInterval);
+  };
+
+  const stopScroll = function () {
+    if (scrolling) {
+      scrolling = false;
       console.log("Stop scroll");
-      clearInterval(auto_scroll);
+      clearInterval(autoScroll);
+      updateScrollbarVisibility(false);
     }
   };
 
   // double click near edge can trigger (Prevent accidental touch)
   // 双击靠近页面边缘的位置可以触发滚屏 (防止误触发)
-  let dblclick_check = (e) => {
-    if (Date.now() - last_click < 500) {
+  const dblclickCheck = (e) => {
+    if (Date.now() - lastClick < 500) {
       return;
     } //just stopped by click
     let range = 50; // effective range
@@ -106,22 +219,20 @@
     console.log(`double click: x=${e.x}/${w} | y=${e.y}/${h}`);
     // Except top edge, because of search bar is mostly at top.
     if (e.x < range || w - e.x < range || h - e.y < range) {
-      toggle_scroll();
+      toggleScroll();
     }
   };
 
   // toogle scrolling by double click
   // if you want to trigger with double click , remove '//' before 'document'.
   // 双击触发
-  document.body.addEventListener("dblclick", dblclick_check);
+  document.body.addEventListener("dblclick", dblclickCheck);
 
   // single click to stop scroll
   document.body.addEventListener("click", (e) => {
     if (scrolling && e.isTrusted) {
-      scrolling = false;
-      console.log("Stop scroll");
-      clearInterval(auto_scroll);
-      last_click = Date.now();
+      stopScroll();
+      lastClick = Date.now();
     }
   });
 
@@ -134,10 +245,10 @@
       fnKey = e.ctrlKey || e.metaKey || e.altKey;
     if (fnKey && keyCode === "ArrowDown") {
       console.log("Press Ctrl/Alt + Down arrow");
-      toggle_scroll();
+      toggleScroll();
     } else if (fnKey && keyCode === "ArrowUp") {
       console.log("Press Ctrl/Alt + Up arrow");
-      toggle_scroll("up");
+      toggleScroll("up");
     }
   };
 })(document);
