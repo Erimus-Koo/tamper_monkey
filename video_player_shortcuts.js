@@ -24,19 +24,18 @@ z: 播放恢复原速
   ("use strict");
 
   const blacklist = ["bilibili"];
-  let videoObj = null; //当前正在播放的视频（含音频）
-  let videoObjAll = []; //所有播放器组
-  let fullScreen = false; //当前的全屏状态
+  let videoObj = null; //当前正在操作的视频（含音频）
+  let videoObjAll = new Set(); //所有播放器组
 
   // -------------------------------------------------- common - START
-  const N = `[视频播放器增强] `;
-  console.log(N);
+  const LOG_PREFIX = `[视频播放器增强] `;
+  console.log(LOG_PREFIX);
 
   const find = (selector) => {
     return document.querySelector(selector);
   };
   const find_n_click = (selector) => {
-    console.log(`${N}cmd: document.querySelector('${selector}').click()`);
+    console.log(`${LOG_PREFIX}cmd: document.querySelector('${selector}').click()`);
     const target = document.querySelector(selector);
     target?.click();
   };
@@ -68,29 +67,42 @@ z: 播放恢复原速
       // 如果是video或audio就加到父级 否则加到指定originEle
       const container =
         originEle.tagName.toLowerCase() === "video" ||
-        originEle.tagName.toLowerCase() === "audio"
+          originEle.tagName.toLowerCase() === "audio"
           ? originEle.parentElement
           : originEle;
       container.appendChild(notificationElement);
     }
 
     // Youtube 需要trustedType才能插入innerHTML
-    const policy = trustedTypes.createPolicy("myPolicy", {
-      createHTML: (string) => string,
-    });
+    let policy;
+    const policyName = "mediaPlayerShortcutPolicy";
+    if (window.trustedTypes) {
+      if (trustedTypes.getPolicyNames().includes(policyName)) {
+        try {
+          policy = trustedTypes.createPolicy(policyName + "_alt", {
+            createHTML: (string) => string,
+          });
+        } catch (e) {
+          // ignore
+        }
+      } else {
+        policy = trustedTypes.createPolicy(policyName, {
+          createHTML: (string) => string,
+        });
+      }
+    }
 
     // console.debug("Notification ele:", notificationElement);
-    // notificationElement.innerHTML = content; //更新消息
-    notificationElement.innerHTML = policy.createHTML(content);
+    if (policy) {
+      notificationElement.innerHTML = policy.createHTML(content);
+    } else {
+      notificationElement.innerHTML = content;
+    }
 
     // 消息出现的定位点
-    // const rect = originEle?.getBoundingClientRect();
-    // console.debug(`${N}Notify origin: left=${rect?.left} top=${rect?.top}`);
-    // notificationElement.style.left = `${rect ? rect.left + offsetX : 20}px`;
-    // notificationElement.style.top = `${rect ? rect.top + offsetY : 20}px`;
     notificationElement.style.left = `${offsetX}px`;
     notificationElement.style.top = `${offsetY}px`;
-    console.debug(`${N}style:`, notificationElement.style);
+    console.debug(`${LOG_PREFIX}style:`, notificationElement.style);
 
     // 添加样式
     const existingStyle = document.querySelector(
@@ -118,6 +130,7 @@ z: 播放恢复原速
   let isDefaultSpeed = false; //for toggle
 
   const setSpeed = (speed) => {
+    if (!videoObj) return;
     if (videoObj.playbackRate === speed) return;
     videoObj.playbackRate = speed;
     const content = `播放速度: ${speed}<br><span style="color:#f90;font-size:.9em;font-family:'JetBrains Mono',Consolas,Menlo,sans-serif">C:加速 V:减速 Z:还原</span>`;
@@ -150,7 +163,7 @@ z: 播放恢复原速
       // v小于1时调速
       playSpeed = Math.max(playSpeed + v, 0);
       playSpeed = Number(playSpeed.toFixed(2));
-      console.debug(`${N}playSpeed(${v}): ${playSpeed}`);
+      console.debug(`${LOG_PREFIX}playSpeed(${v}): ${playSpeed}`);
       localStorage.setItem(LS_playSpeed, playSpeed);
       setSpeed(playSpeed);
     }
@@ -159,12 +172,13 @@ z: 播放恢复原速
 
   // -------------------------------------------------- 音量控制 - START
   const changeVideoVolume = function (v = 0) {
+    if (!videoObj) return;
     const LS_videoVolume = "video_player_video_volume"; // 播放音量的存储名
     let volume = parseFloat(localStorage.getItem(LS_videoVolume)) || 0.5; // 读取音量
     volume = Math.min(Math.max(volume + v, 0), 1);
     volume = Number(volume.toFixed(2));
     if (v != 0) {
-      console.log(`${N}volume(${v}): ${volume}`);
+      console.log(`${LOG_PREFIX}volume(${v}): ${volume}`);
     }
     localStorage.setItem(LS_videoVolume, volume);
     // 因为B站本身已经有了调音功能 所以只记录 不改变音量 不然会改变多次
@@ -176,34 +190,36 @@ z: 播放恢复原速
 
   // -------------------------------------------------- 视频全屏 - START
   const videoFullScreen = () => {
-    fullScreen = !fullScreen;
-    // if (fullScreen) {
-    //   if (videoObj.requestFullscreen) {
-    //     videoObj.requestFullscreen();
-    //   } else if (videoObj.mozRequestFullScreen) {
-    //     // 兼容 Firefox
-    //     videoObj.mozRequestFullScreen();
-    //   } else if (videoObj.webkitRequestFullscreen) {
-    //     // 兼容 Chrome, Safari 和 Opera
-    //     videoObj.webkitRequestFullscreen();
-    //   } else if (videoObj.msRequestFullscreen) {
-    //     // 兼容 Internet Explorer 和 Edge
-    //     videoObj.msRequestFullscreen();
-    //   }
-    // } else {
-    //   if (document.exitFullscreen) {
-    //     document.exitFullscreen();
-    //   } else if (document.mozCancelFullScreen) {
-    //     // 兼容 Firefox
-    //     document.mozCancelFullScreen();
-    //   } else if (document.webkitExitFullscreen) {
-    //     // 兼容 Chrome, Safari 和 Opera
-    //     document.webkitExitFullscreen();
-    //   } else if (document.msExitFullscreen) {
-    //     // 兼容 Internet Explorer 和 Edge
-    //     document.msExitFullscreen();
-    //   }
-    // }
+    // 自动寻找当前应该全屏的对象
+    const target = videoObj || document.querySelector("video") || document.documentElement;
+
+    const isFull = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+
+    if (!isFull) {
+      if (target.requestFullscreen) {
+        target.requestFullscreen();
+      } else if (target.mozRequestFullScreen) {
+        target.mozRequestFullScreen();
+      } else if (target.webkitRequestFullscreen) {
+        target.webkitRequestFullscreen();
+      } else if (target.msRequestFullscreen) {
+        target.msRequestFullscreen();
+      } else {
+        console.warn(`${LOG_PREFIX}No fullscreen API found on target.`);
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.mozCancelFullScreen) {
+        document.mozCancelFullScreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+      } else {
+        console.warn(`${LOG_PREFIX}No exitFullscreen API found.`);
+      }
+    }
   };
   // -------------------------------------------------- 视频全屏 - END
 
@@ -222,8 +238,9 @@ z: 播放恢复原速
   };
   //进度条跳转
   for (let i of Array(10).keys()) {
-    keyActionsStopPropagation[i.toString()] = () =>
-      (videoObj.currentTime = (videoObj.duration / 10) * i);
+    keyActionsStopPropagation[i.toString()] = () => {
+      if (videoObj) videoObj.currentTime = (videoObj.duration / 10) * i;
+    };
   }
   // console.debug("keyActionsStopPropagation:", keyActionsStopPropagation);
   // 以下是不需要阻止事件传播的按键
@@ -235,8 +252,6 @@ z: 播放恢复原速
   };
 
   const pressKeyDown = function (e) {
-    // console.debug("keyDown e:", e);
-
     // 如果光标在输入框里，快捷键不生效
     if (
       e.target.isContentEditable ||
@@ -245,32 +260,27 @@ z: 播放恢复原速
     )
       return;
 
-    if (!videoObj) return; //还没有视频
-
     // 判断组合键
     keyPressed[e.key] = true;
-    // console.debug("keyDown keyPressed:", keyPressed);
     const keys = Object.keys(keyPressed).sort().toString();
-    console.debug(`${N}keyDown keys:`, keys); //如果多按键会变成"a,b"
 
     // 设置快捷键
     if (keys in shortcutDict) {
-      //字典里定义的直接搜索并点击的快捷键
-      console.log(`${N}keys in dict`);
+      console.log(`${LOG_PREFIX}Shortcut: ${keys}`);
       shortcutDict[keys]();
       e.stopPropagation();
+      e.preventDefault();
     } else if (keys in keyActionsStopPropagation) {
-      //运行自定义函数的快捷键
-      console.log(`${N}keys action with stop propagation`);
+      if (!videoObj) return;
+      console.log(`${LOG_PREFIX}Action (StopProp): ${keys}`);
       keyActionsStopPropagation[keys]();
       e.stopPropagation();
+      e.preventDefault();
     } else if (keys in keyActions) {
-      //不需要阻止传递的快捷键
-      console.log(`${N}keys action without stop`);
+      if (!videoObj) return;
+      console.log(`${LOG_PREFIX}Action: ${keys}`);
       keyActions[keys]();
     } else {
-      console.log(`${N}keys not in shortcuts, passed.`);
-
       // 在 iframe 中的话发送消息给父窗口
       if (window.self !== window.top) {
         const data = {
@@ -286,94 +296,127 @@ z: 播放恢复原速
   };
 
   const pressKeyUp = function (e) {
-    // console.debug("keyUp e:", e);
     delete keyPressed[e.key];
-    // console.debug("keyUp keyPressed:", keyPressed);
     if (window.self !== window.top) {
       window.top.postMessage({ type: "keyUp" }, "*");
     }
   };
 
-  window.onfocus = function () {
-    // 当窗口获得焦点时
-    // console.debug("Ctrl+数字切出tab页不会清空按键，所以重新进入时清空一下。");
+  const clearKeys = function () {
     keyPressed = {}; // 清空
   };
+
+  window.onfocus = clearKeys;
+  window.onblur = clearKeys;
+
   // -------------------------------------------------- shortcut - END
 
   // -------------------------------------------------- init - START
   // 观察页面，如果出现新的video元素，则记录到列表中
-  const observeVideos = () => {
+  const observeVideos = (mutationsList) => {
     // 不对youtube shorts处理
     if (window.location.href?.includes("youtube.com/shorts")) return;
 
-    const videoElements = document.querySelectorAll("video");
-    const audioElements = document.querySelectorAll("audio");
-    const mediaElements = [...videoElements, ...audioElements];
+    // 处理移除的元素防止内存泄漏
+    if (mutationsList) {
+      for (let mutation of mutationsList) {
+        if (mutation.removedNodes.length) {
+          mutation.removedNodes.forEach((node) => {
+            if (node.tagName?.toLowerCase() === "video" || node.tagName?.toLowerCase() === "audio") {
+              videoObjAll.delete(node);
+              if (videoObj === node) videoObj = null;
+            } else if (node.querySelectorAll) {
+              node.querySelectorAll("video, audio").forEach((media) => {
+                videoObjAll.delete(media);
+                if (videoObj === media) videoObj = null;
+              });
+            }
+          });
+        }
+      }
+    }
+
+    const mediaElements = document.querySelectorAll("video, audio");
     mediaElements.forEach((media) => {
-      if (!videoObjAll.includes(media)) {
-        videoObjAll.push(media);
-        // console.debug("📷 Find new video element:", media);
+      if (!videoObjAll.has(media)) {
+        videoObjAll.add(media);
+
+        // 增加主动抓取逻辑：播放时、点击时、聚焦时，都锁定该对象
         media.addEventListener("play", () => {
           videoStartPlay(media);
-          // 在 iframe 中的话发送消息给父窗口
           if (window.self !== window.top) {
             window.top.postMessage({ type: "videoStarted" }, "*");
           }
         });
+        media.addEventListener("mousedown", () => {
+          videoObj = media; //点击即锁定
+          console.debug(`${LOG_PREFIX}Locked videoObj via click:`, videoObj);
+        });
+        media.addEventListener("focus", () => {
+          videoObj = media; //聚焦即锁定
+          console.debug(`${LOG_PREFIX}Locked videoObj via focus:`, videoObj);
+        });
+
         media.addEventListener("ended", () => {
-          // 在 iframe 中的话发送消息给父窗口
           if (window.self !== window.top) {
             window.top.postMessage({ type: "videoEnded" }, "*");
           }
         });
       }
     });
+
+    // 兜底方案：如果没有正在操作的对象，找一个正在播放的，或者找面积最大的
+    if (!videoObj) {
+      let playing = Array.from(videoObjAll).find(v => !v.paused);
+      if (playing) {
+        videoObj = playing;
+      } else {
+        // 尝试找面积最大的视频
+        let largest = null;
+        let maxArea = 0;
+        document.querySelectorAll('video').forEach(v => {
+          let area = v.offsetWidth * v.offsetHeight;
+          if (area > maxArea) {
+            maxArea = area;
+            largest = v;
+          }
+        });
+        if (largest) videoObj = largest;
+      }
+    }
   };
 
   const videoStartPlay = (media) => {
-    // 更新当前正在播放的视频元素
     videoObj = media;
     videoObj.focus();
-    console.debug(`${N}Current playing videoObj:`, videoObj);
-
-    // 读取播放器配置
+    console.debug(`${LOG_PREFIX}Current playing videoObj:`, videoObj);
     changePlaySpeed();
     changeVideoVolume();
   };
 
   // 处理 iframe 外层消息事件
-  window.addEventListener("message", (data) => {
-    // console.log("🚀 ~ window.addEventListener ~ data:", data);
-    // 解析指令并处理
-    if (data.data.action === "focusVideo") {
+  window.addEventListener("message", (event) => {
+    if (event.origin !== window.location.origin && event.origin !== "null") return;
+    if (event.data.action === "focusVideo") {
       console.debug("👆 Received focus request from outer page.");
       videoObj?.focus();
     }
   });
 
-  // 初始化动作（以前B站跳转油猴不会重载，所以抽象，现在似乎已无必要）
   const init = function () {
-    // console.debug("Init:", document.URL);
-
-    // 跳过黑名单的域名
     if (blacklist.some((kw) => window.location.href?.includes(kw))) return;
 
-    // 观察新添加的video元素
     observeVideos();
-
-    // 使用MutationObserver观察新添加的video元素
-    const observer = new MutationObserver(observeVideos);
+    const observer = new MutationObserver((mutations) => observeVideos(mutations));
     observer.observe(document.body, { childList: true, subtree: true });
 
-    // 添加快捷键监听
-    document.addEventListener("keydown", (e) => pressKeyDown(e));
-    document.addEventListener("keyup", (e) => pressKeyUp(e));
+    document.addEventListener("keydown", (e) => pressKeyDown(e), true); //使用捕获阶段，防止被页面脚本拦截
+    document.addEventListener("keyup", (e) => pressKeyUp(e), true);
 
-    // 初次载入时可能会还没来得及监听 所以先遍历一次
-    document.querySelectorAll("video").forEach((video) => {
-      if (!video.paused) {
-        videoObj = video;
+    // 初次载入
+    document.querySelectorAll("video, audio").forEach((media) => {
+      if (!media.paused) {
+        videoObj = media;
         changePlaySpeed();
         changeVideoVolume();
       }
@@ -381,4 +424,5 @@ z: 播放恢复原速
   };
   init();
   // -------------------------------------------------- init - END
+
 })();
