@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         B站上单播放器 Mongolian Player
-// @version      0.1.6
+// @version      0.1.7
 // @description  B站播放器优化。添加了一些 youtube 和 potplayer 的快捷键。修复了多P连播，增加了自动播放记忆位置等功能。
 // @author       Erimus
 // @namespace    https://greasyfork.org/users/46393
@@ -22,7 +22,6 @@
 
 /* 功能说明
 ====================
-Version test comment.
 */
 
 (function () {
