@@ -16,6 +16,8 @@
 // @match        *://t.bilibili.com/*
 // @match        *://www.bilibili.com/list/*
 // @match        *://www.bilibili.com/video/*
+
+// @require      https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js
 // ==/UserScript==
 
 /* 功能说明
@@ -53,11 +55,12 @@
     blockDisplay: "fade", //fade|hide
     updateTime: new Date().toISOString(),
   };
-  // GM_setValue(cfgKey, JSON.stringify(defaultConfig)); //reset
-  const thisConfig = GM_getValue(cfgKey, JSON.stringify(defaultConfig));
-  console.debug(`${N}🚨 thisConfig:`, thisConfig);
-  let cfgData = JSON.parse(GM_getValue(cfgKey, JSON.stringify(defaultConfig)));
+  const rawCfg = GM_getValue(cfgKey, JSON.stringify(defaultConfig));
+  console.debug(`${N}🚨 rawCfg:`, rawCfg);
+  let cfgData = JSON.parse(rawCfg);
   console.debug(`${N}🚨 cfgData:`, cfgData);
+
+  let spamTitleList, spamAuthorList;
 
   const ruleOfRule = `规则列表写法
 - 一行一条规则
@@ -78,7 +81,7 @@
             : c;
         } catch (error) {
           alert(`SPAM BLOCKER\n\n🚨 ${error}\ncontent:${c}`);
-          throw new Error(e);
+          throw new Error(error);
         }
       });
 
@@ -95,12 +98,9 @@
   // Replace with your Gist ID and token
   const gistKey = "bilibili_spam_blocker_gist";
   const defaultGistSetting = { id: "", file: "", token: "" };
-  // GM_setValue(gistKey, JSON.stringify(defaultGistSetting)); //reset
-  const config = GM_getValue(gistKey, JSON.stringify(defaultGistSetting));
-  console.debug(`${N}🚨 config:`, config);
-  let gistData = JSON.parse(
-    GM_getValue(gistKey, JSON.stringify(defaultGistSetting))
-  );
+  const rawGistCfg = GM_getValue(gistKey, JSON.stringify(defaultGistSetting));
+  console.debug(`${N}🚨 rawGistCfg:`, rawGistCfg);
+  let gistData = JSON.parse(rawGistCfg);
   console.debug(`${N}🚨 gistData:`, gistData);
 
   const fetchGistContent = async () => {
@@ -413,7 +413,7 @@ padding:.5em 1em;position:fixed;left:.5em;bottom:.5em;background:red;color:white
         try {
           spamTitleList = str2list(`${gistConfig.title}`);
           spamAuthorList = str2list(`${gistConfig.author}`);
-        } catch (err) {}
+        } catch (err) { }
         // 替换本地配置并保存
         cfgData = gistConfig;
         GM_setValue(cfgKey, JSON.stringify(cfgData));
