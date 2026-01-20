@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         B站上单播放器 Mongolian Player
-// @version      0.1.7
+// @version      0.1.8
 // @description  B站播放器优化。添加了一些 youtube 和 potplayer 的快捷键。修复了多P连播，增加了自动播放记忆位置等功能。
 // @author       Erimus
 // @namespace    https://greasyfork.org/users/46393
@@ -22,6 +22,13 @@
 
 /* 功能说明
 ====================
+1. 关键词/正则屏蔽：支持在设置面板中为标题和作者设置过滤规则（支持正则表达式 /pattern/i）。
+2. 时长过滤：自动处理超过指定时长（默认5小时）的视频，支持“淡出”或“完全隐藏”。
+3. Gist 云同步：支持通过 GitHub Gist 实现多设备屏蔽规则同步。
+4. 快捷键：
+   - [Ctrl + B] : 打开/保存并关闭设置面板。
+   - [Ctrl + Q] / [Esc] : 保存并关闭或放弃修改。
+5. 规则写法：每行一条，支持 // 注释，空行或包含 '-----' 的行会被忽略。
 */
 
 (function () {
