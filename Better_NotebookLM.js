@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         Better NotebookLM
 // @namespace    http://tampermonkey.net/
-// @version      0.0.3
+// @version      0.0.4
 // @description  Save and restore textarea content
 // @author       Erimus
 // @match        https://notebooklm.google.com/notebook/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=google.com
 
-// @grant        none
+// @grant        GM_setValue
+// @grant        GM_getValue
 
 // ==/UserScript==
 
@@ -95,8 +96,21 @@ README
 
       // 创建保存按钮
       const saveBtn = document.createElement("button");
-      saveBtn.textContent = "保存";
-      saveBtn.style.marginRight = "8px";
+      saveBtn.textContent = "Save Prompt";
+      saveBtn.style.cssText = `
+        margin-right: 8px;
+        font-size: 14px;
+        background: none;
+        border: none;
+        color: #999;
+        cursor: pointer;
+        padding: 8px 12px;
+        display: inline-block;
+        opacity: 1;
+        visibility: visible;
+        position: relative;
+        z-index: 1;
+      `;
 
       saveBtn.onclick = () => {
         // 获取当前 textarea 的内容
@@ -109,6 +123,7 @@ README
       // 将保存按钮插入到 primary button 的前一个兄弟元素位置
       primaryButton.parentElement.insertBefore(saveBtn, primaryButton);
       primaryButton._saveButtonAdded = true;
+      console.log("Save button added successfully", saveBtn);
 
       // 自动填充 textarea（如果有保存的内容）
       const savedText = localStorage.getItem(STORAGE_KEY) || "";
