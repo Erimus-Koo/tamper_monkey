@@ -4,7 +4,7 @@
 // @version      0.0.4
 // @description  Save and restore textarea content
 // @author       Erimus
-// @match        https://notebooklm.google.com/notebook/*
+// @match        https://notebooklm.google.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=google.com
 
 // @grant        GM_setValue
@@ -78,18 +78,22 @@ README
   const observer = new MutationObserver(() => {
     const h1 = document.querySelector("h1#mat-mdc-dialog-title-0");
     const textarea = document.querySelector(
-      'textarea[matinput][cdktextareaautosize][aria-label="Input to describe the kind of report to create"]',
+      '.custom-report-content textarea[placeholder*="For example:"]',
     );
     const primaryButton = document.querySelector('button[color="primary"]');
+
+    // 避免重复处理 - 检查是否已经添加过保存按钮
+    if (document.querySelector("[data-save-button-added]")) {
+      return;
+    }
 
     console.log("Observer triggered:", {
       h1: !!h1,
       textarea: !!textarea,
       primaryButton: !!primaryButton,
-      alreadyAdded: primaryButton?._saveButtonAdded,
     });
 
-    if (h1 && textarea && primaryButton && !primaryButton._saveButtonAdded) {
+    if (h1 && textarea && primaryButton) {
       console.log(
         "All elements found, adding save button and filling textarea",
       );
@@ -122,7 +126,9 @@ README
 
       // 将保存按钮插入到 primary button 的前一个兄弟元素位置
       primaryButton.parentElement.insertBefore(saveBtn, primaryButton);
-      primaryButton._saveButtonAdded = true;
+
+      // 标记已添加保存按钮，避免重复添加
+      saveBtn.setAttribute("data-save-button-added", "true");
       console.log("Save button added successfully", saveBtn);
 
       // 自动填充 textarea（如果有保存的内容）
