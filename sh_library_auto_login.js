@@ -75,7 +75,7 @@
       // 3. 处理隐私协议勾选框
       // 这里的选择器包含了 ID 和通用的 class 选择器
       const checkboxes = document.querySelectorAll(
-        "#agreement-username-login, #agreement-mobile-login, .privacyPolicy input[type='checkbox']"
+        "#agreement-username-login, #agreement-mobile-login, .privacyPolicy input[type='checkbox']",
       );
 
       let privacyChecked = false;
@@ -96,7 +96,9 @@
       });
 
       // 4. 处理验证码
-      const captchaFields = document.querySelectorAll("#captcha, #inputCaptcha");
+      const captchaFields = document.querySelectorAll(
+        "#captcha, #inputCaptcha",
+      );
       let visibleCaptchaField = null;
       for (const field of captchaFields) {
         if (field.offsetParent !== null) {
@@ -105,12 +107,28 @@
         }
       }
 
-      const captchaValue = visibleCaptchaField ? visibleCaptchaField.value.trim() : "";
+      const captchaValue = visibleCaptchaField
+        ? visibleCaptchaField.value.trim()
+        : "";
       const captchaFilled = captchaValue.length >= 4;
 
       // 日志（由于是轮询，只在状态变化或满足条件时打印关键日志）
       if (privacyChecked && captchaFilled && savedUsername && savedPassword) {
-        console.log("[AutoLogin] 条件满足：协议已勾选，验证码已填入。准备登录！");
+        console.log(
+          "[AutoLogin] 条件满足：协议已勾选，验证码已填入。准备登录！",
+        );
+
+        // 【重要】在点击登录前，必须重新填写一遍原始密码！
+        // 原因：上图登录系统有个奇葩设计 - 如果登录失败，密码框里的明文密码会被替换成MD5值
+        // 如果不重新填写原始密码，下次登录时会对MD5值再次进行MD5编码，导致密码错误
+        // 这个设计简直离谱，但我们只能适配这种反人类的逻辑
+        if (passwordField && savedPassword) {
+          passwordField.value = savedPassword;
+          console.log(
+            "[AutoLogin] 重新填写原始密码，防止MD5二次编码的离谱问题",
+          );
+        }
+
         clearInterval(pollInterval);
         loginButton?.click();
       } else if (privacyChecked && !captchaFilled) {
@@ -126,7 +144,9 @@
 
     // 初始聚焦：如果验证码为空，聚焦到验证码
     setTimeout(() => {
-      const captchaFields = document.querySelectorAll("#captcha, #inputCaptcha");
+      const captchaFields = document.querySelectorAll(
+        "#captcha, #inputCaptcha",
+      );
       for (const field of captchaFields) {
         if (field.offsetParent !== null && field.value === "") {
           field.focus();
