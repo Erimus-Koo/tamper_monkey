@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Video Player Shortcuts
-// @version      0.2.0
+// @version      0.2.1
 // @description  Add shortcut to video player
 // @author       Erimus
 // @match        *://*
@@ -35,7 +35,9 @@ z: 播放恢复原速
     return document.querySelector(selector);
   };
   const find_n_click = (selector) => {
-    console.log(`${LOG_PREFIX}cmd: document.querySelector('${selector}').click()`);
+    console.log(
+      `${LOG_PREFIX}cmd: document.querySelector('${selector}').click()`,
+    );
     const target = document.querySelector(selector);
     target?.click();
   };
@@ -47,14 +49,14 @@ z: 播放恢复原速
     originEle, //定位对象 消息出现的位置 一般是视频对象
     delay = 3, //消息停留时间
     offsetX = 20,
-    offsetY = 20
+    offsetY = 20,
   ) {
     if (!originEle) originEle = document.body;
 
     // 检查已有的通知容器
     const notiName = "media-player-shortcut";
     let notificationElement = originEle.querySelector(
-      `.notification[data-target="${notiName}"]`
+      `.notification[data-target="${notiName}"]`,
     );
     if (notificationElement) {
       // console.debug("⚠️ notify existed");
@@ -67,7 +69,7 @@ z: 播放恢复原速
       // 如果是video或audio就加到父级 否则加到指定originEle
       const container =
         originEle.tagName.toLowerCase() === "video" ||
-          originEle.tagName.toLowerCase() === "audio"
+        originEle.tagName.toLowerCase() === "audio"
           ? originEle.parentElement
           : originEle;
       container.appendChild(notificationElement);
@@ -76,19 +78,26 @@ z: 播放恢复原速
     // Youtube 需要trustedType才能插入innerHTML
     let policy;
     const policyName = "mediaPlayerShortcutPolicy";
-    if (window.trustedTypes) {
-      if (trustedTypes.getPolicyNames().includes(policyName)) {
-        try {
-          policy = trustedTypes.createPolicy(policyName + "_alt", {
+    if (window.trustedTypes && window.trustedTypes.createPolicy) {
+      try {
+        // 检查是否已存在policy
+        const existingPolicies = window.trustedTypes.getPolicyNames
+          ? window.trustedTypes.getPolicyNames()
+          : [];
+        if (existingPolicies.includes(policyName)) {
+          policy = trustedTypes.createPolicy(
+            policyName + "_alt_" + Date.now(),
+            {
+              createHTML: (string) => string,
+            },
+          );
+        } else {
+          policy = trustedTypes.createPolicy(policyName, {
             createHTML: (string) => string,
           });
-        } catch (e) {
-          // ignore
         }
-      } else {
-        policy = trustedTypes.createPolicy(policyName, {
-          createHTML: (string) => string,
-        });
+      } catch (e) {
+        console.warn(`${LOG_PREFIX}TrustedTypes policy creation failed:`, e);
       }
     }
 
@@ -102,11 +111,15 @@ z: 播放恢复原速
     // 消息出现的定位点
     notificationElement.style.left = `${offsetX}px`;
     notificationElement.style.top = `${offsetY}px`;
-    console.debug(`${LOG_PREFIX}style:`, notificationElement.style);
+    console.log(
+      `${LOG_PREFIX}Notification position - left: ${offsetX}px, top: ${offsetY}px`,
+    );
+    console.log(`${LOG_PREFIX}Notification container:`, container);
+    console.log(`${LOG_PREFIX}Notification element:`, notificationElement);
 
     // 添加样式
     const existingStyle = document.querySelector(
-      `style[data-target="${notiName}"]`
+      `style[data-target="${notiName}"]`,
     );
     if (!existingStyle) {
       const style = document.createElement("style");
@@ -191,9 +204,15 @@ z: 播放恢复原速
   // -------------------------------------------------- 视频全屏 - START
   const videoFullScreen = () => {
     // 自动寻找当前应该全屏的对象
-    const target = videoObj || document.querySelector("video") || document.documentElement;
+    const target =
+      videoObj || document.querySelector("video") || document.documentElement;
 
-    const isFull = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+    const isFull = !!(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.mozFullScreenElement ||
+      document.msFullscreenElement
+    );
 
     if (!isFull) {
       if (target.requestFullscreen) {
@@ -235,6 +254,11 @@ z: 播放恢复原速
     c: () => changePlaySpeed(0.1), //加速
     v: () => changePlaySpeed(-0.1), //减速
     z: () => changePlaySpeed(99), //toggle 默认速度
+    // 新增：Alt/Ctrl + < 和 > 调速
+    "Alt,<": () => changePlaySpeed(-0.1), //减速
+    "Alt,>": () => changePlaySpeed(0.1), //加速
+    "Control,<": () => changePlaySpeed(-0.1), //减速 (Mac用Ctrl)
+    "Control,>": () => changePlaySpeed(0.1), //加速 (Mac用Ctrl)
   };
   //进度条跳转
   for (let i of Array(10).keys()) {
@@ -260,7 +284,11 @@ z: 播放恢复原速
     )
       return;
 
-    // 判断组合键
+    // 判断组合键 - 记录修饰键和普通键
+    if (e.altKey) keyPressed["Alt"] = true;
+    if (e.ctrlKey) keyPressed["Control"] = true;
+    if (e.metaKey) keyPressed["Meta"] = true;
+    if (e.shiftKey) keyPressed["Shift"] = true;
     keyPressed[e.key] = true;
     const keys = Object.keys(keyPressed).sort().toString();
 
@@ -296,6 +324,11 @@ z: 播放恢复原速
   };
 
   const pressKeyUp = function (e) {
+    // 清除修饰键和普通键
+    if (!e.altKey) delete keyPressed["Alt"];
+    if (!e.ctrlKey) delete keyPressed["Control"];
+    if (!e.metaKey) delete keyPressed["Meta"];
+    if (!e.shiftKey) delete keyPressed["Shift"];
     delete keyPressed[e.key];
     if (window.self !== window.top) {
       window.top.postMessage({ type: "keyUp" }, "*");
@@ -322,7 +355,10 @@ z: 播放恢复原速
       for (let mutation of mutationsList) {
         if (mutation.removedNodes.length) {
           mutation.removedNodes.forEach((node) => {
-            if (node.tagName?.toLowerCase() === "video" || node.tagName?.toLowerCase() === "audio") {
+            if (
+              node.tagName?.toLowerCase() === "video" ||
+              node.tagName?.toLowerCase() === "audio"
+            ) {
               videoObjAll.delete(node);
               if (videoObj === node) videoObj = null;
             } else if (node.querySelectorAll) {
@@ -367,14 +403,14 @@ z: 播放恢复原速
 
     // 兜底方案：如果没有正在操作的对象，找一个正在播放的，或者找面积最大的
     if (!videoObj) {
-      let playing = Array.from(videoObjAll).find(v => !v.paused);
+      let playing = Array.from(videoObjAll).find((v) => !v.paused);
       if (playing) {
         videoObj = playing;
       } else {
         // 尝试找面积最大的视频
         let largest = null;
         let maxArea = 0;
-        document.querySelectorAll('video').forEach(v => {
+        document.querySelectorAll("video").forEach((v) => {
           let area = v.offsetWidth * v.offsetHeight;
           if (area > maxArea) {
             maxArea = area;
@@ -396,7 +432,8 @@ z: 播放恢复原速
 
   // 处理 iframe 外层消息事件
   window.addEventListener("message", (event) => {
-    if (event.origin !== window.location.origin && event.origin !== "null") return;
+    if (event.origin !== window.location.origin && event.origin !== "null")
+      return;
     if (event.data.action === "focusVideo") {
       console.debug("👆 Received focus request from outer page.");
       videoObj?.focus();
@@ -407,7 +444,9 @@ z: 播放恢复原速
     if (blacklist.some((kw) => window.location.href?.includes(kw))) return;
 
     observeVideos();
-    const observer = new MutationObserver((mutations) => observeVideos(mutations));
+    const observer = new MutationObserver((mutations) =>
+      observeVideos(mutations),
+    );
     observer.observe(document.body, { childList: true, subtree: true });
 
     document.addEventListener("keydown", (e) => pressKeyDown(e), true); //使用捕获阶段，防止被页面脚本拦截
@@ -424,5 +463,4 @@ z: 播放恢复原速
   };
   init();
   // -------------------------------------------------- init - END
-
 })();
