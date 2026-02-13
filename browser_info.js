@@ -9,9 +9,10 @@
 // @require      https://raw.githubusercontent.com/Erimus-Koo/tamper_monkey/master/browser_info.js?v=0930
 // ==/UserScript==
 
-// @require      file://D:\OneDrive\05ProgramProject\tamper_monkey\browser_info.js
-// @require      file:///Users/erimus/OneDrive/05ProgramProject/tamper_monkey/browser_info.js
-// @require      https://raw.githubusercontent.com/Erimus-Koo/tamper_monkey/master/browser_info.js
+/**
+  本脚本是将浏览器信息注入 html 属性
+  使我可以通过 CSS 选择器针对浏览器和平台做一些调整
+*/
 
 (function (document) {
   // -------------------------------------------------- common - START
