@@ -98,7 +98,7 @@
     container.style.top = "0";
     container.style.left = "50%";
     container.style.transform = "translateX(-50%)"; // 水平居中
-    container.style.zIndex = "9999";
+    container.style.zIndex = "999999999";
     container.style.pointerEvents = "none"; // 不干扰页面交互
     container.style.display = "flex";
     container.style.flexDirection = "column";
