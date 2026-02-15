@@ -5,12 +5,17 @@
 // @author       Erimus
 // @namespace    https://greasyfork.org/users/46393
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=bilibili.com
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_xmlhttpRequest
 
 // @match        *://www.bilibili.com/watchlater/*/list
 // @match        *://www.bilibili.com/list/watchlater
 // @match        *://www.bilibili.com/?*
 // @match        *://t.bilibili.com/*
 // @match        *://space.bilibili.com/*
+
+// @require      https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js
 // ==/UserScript==
 
 /* 功能说明
@@ -331,6 +336,537 @@
   };
   // -------------------------------------------------- shortcut - END
 
+  // -------------------------------------------------- 自动收藏到稍后播 - START
+  const STORAGE_KEY = "bilibili_auto_collect_data";
+
+  // Gist 配置
+  const GIST_KEY = "bilibili_watchlater_gist";
+  const defaultGistSetting = { id: "", file: "", token: "" };
+  const rawGistCfg = GM_getValue(GIST_KEY, JSON.stringify(defaultGistSetting));
+  let gistData = JSON.parse(rawGistCfg);
+
+  // 自动收藏状态
+  let isRunning = false;
+  let isPaused = false;
+  let processedCount = 0;
+
+  // 获取存储的数据
+  const getStorageData = () => {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return {
+        subscribedAuthorsText: "", // 原始文本，包含注释
+        subscribedAuthors: [], // 清洗后的作者列表
+        lastStopId: "",
+        addedIds: [],
+        updateTime: "", // 用于Gist同步
+      };
+    }
+    const data = JSON.parse(raw);
+    if (!data.updateTime) data.updateTime = "";
+    return data;
+  };
+
+  // 保存数据
+  const saveStorageData = (data) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  };
+
+  // 解析作者列表（从文本中提取纯作者名）
+  const parseAuthors = (text) => {
+    return text
+      .split("\n")
+      .map((line) => line.split("//")[0].trim()) // 去掉行内注释
+      .filter((line) => line && !line.includes("-----"));
+  };
+
+  // Gist 同步功能
+  const fetchGistContent = async () => {
+    try {
+      return new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+          method: "GET",
+          url: `https://api.github.com/gists/${gistData.id}`,
+          headers: {
+            Authorization: `token ${gistData.token}`,
+            Accept: "application/vnd.github.v3+json",
+          },
+          onload: (response) => {
+            if (response.status === 200) {
+              const _gist = JSON.parse(response.responseText);
+              const _content = _gist.files[gistData.file].content;
+              const configData = jsyaml.load(_content);
+              resolve(configData);
+            } else {
+              reject(new Error("Error fetching Gist: " + response.statusText));
+            }
+          },
+          onerror: (error) => {
+            reject(error);
+          },
+        });
+      });
+    } catch (error) {
+      console.error(`${N}Error fetching Gist:`, error);
+      throw error;
+    }
+  };
+
+  const uploadGistContent = async (newConfig) => {
+    try {
+      const newContent = jsyaml.dump(newConfig);
+      console.log(`${N}上传到 Gist:`, newContent);
+
+      const updatedData = {
+        files: {
+          [gistData.file]: { content: newContent },
+        },
+      };
+
+      return new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+          method: "PATCH",
+          url: `https://api.github.com/gists/${gistData.id}`,
+          headers: {
+            Authorization: `token ${gistData.token}`,
+            Accept: "application/vnd.github.v3+json",
+          },
+          data: JSON.stringify(updatedData),
+          onload: (response) => {
+            if (response.status === 200) {
+              resolve("Gist updated successfully!");
+            } else {
+              reject(new Error("Error updating Gist: " + response.statusText));
+            }
+          },
+          onerror: (error) => {
+            reject(error);
+          },
+        });
+      });
+    } catch (error) {
+      console.error(`${N}Error updating Gist:`, error);
+      throw error;
+    }
+  };
+
+  const syncGist = async () => {
+    if (!gistData.id || !gistData.file || !gistData.token) {
+      console.log(`${N}Gist 未配置，跳过同步`);
+      return;
+    }
+
+    try {
+      const data = getStorageData();
+      const gistConfig = await fetchGistContent();
+
+      if (!gistConfig.updateTime) gistConfig.updateTime = "";
+      if (!data.updateTime) data.updateTime = "";
+
+      console.log(
+        `${N}📥 Gist时间: ${gistConfig.updateTime}, 本地时间: ${data.updateTime}`,
+      );
+
+      // 本地配置较新
+      if (data.updateTime > gistConfig.updateTime) {
+        const uploadData = {
+          subscribedAuthorsText: data.subscribedAuthorsText,
+          updateTime: new Date().toISOString(),
+        };
+        const message = await uploadGistContent(uploadData);
+        console.log(`${N}👆 本地较新，上传到 Gist:`, message);
+
+        // 更新本地时间
+        data.updateTime = uploadData.updateTime;
+        saveStorageData(data);
+      }
+      // Gist 较新
+      else if (gistConfig.updateTime > data.updateTime) {
+        console.log(`${N}👇 Gist 较新，更新本地`);
+        data.subscribedAuthorsText = gistConfig.subscribedAuthorsText || "";
+        data.subscribedAuthors = parseAuthors(data.subscribedAuthorsText);
+        data.updateTime = gistConfig.updateTime;
+        saveStorageData(data);
+      } else {
+        console.log(`${N}💚 Gist 和本地时间相同`);
+      }
+    } catch (error) {
+      console.error(`${N}Gist 同步失败:`, error);
+    }
+  };
+
+  // 提取视频ID和标题
+  const extractVideoId = (item) => {
+    const link = item.querySelector(".bili-dyn-card-video");
+    if (!link) return null;
+    const href = link.getAttribute("href");
+    const match = href?.match(/\/video\/([^\/]+)/);
+    return match ? match[1] : null;
+  };
+
+  const extractVideoTitle = (item) => {
+    const titleEle = item.querySelector(".bili-dyn-card-video__title");
+    return titleEle ? titleEle.textContent.trim() : "";
+  };
+
+  // 检查是否应该跳过
+  const shouldSkip = (item) => {
+    const authorEle = item.querySelector(".bili-dyn-title__text");
+    if (!authorEle) {
+      console.log(`${N}跳过：没有作者名`);
+      return true;
+    }
+
+    const badge = item.querySelector(".bili-dyn-card-video__badge");
+    if (badge && badge.textContent.trim() === "充电专属") {
+      console.log(`${N}跳过：充电专属`);
+      return true;
+    }
+
+    return false;
+  };
+
+  // 处理单个item
+  const processItem = async (item, subscribedAuthors, addedIds) => {
+    if (shouldSkip(item)) return false;
+
+    const videoId = extractVideoId(item);
+    const videoTitle = extractVideoTitle(item);
+
+    if (!videoId) {
+      console.log(`${N}跳过：无法提取视频ID`);
+      return false;
+    }
+
+    if (addedIds.includes(videoId)) {
+      console.log(`${N}跳过：已添加过 - ${videoTitle} (${videoId})`);
+      item.classList.add("added-to-watch-later");
+      return false;
+    }
+
+    const authorEle = item.querySelector(".bili-dyn-title__text");
+    const author = authorEle.textContent.trim();
+
+    if (!subscribedAuthors.includes(author)) {
+      return false;
+    }
+
+    console.log(`${N}✅ 匹配作者: ${author}, 视频: ${videoTitle} (${videoId})`);
+
+    const watchLaterBtn = item.querySelector(".bili-dyn-card-video__mark");
+    if (watchLaterBtn) {
+      watchLaterBtn.click();
+      item.classList.add("added-to-watch-later");
+      console.log(
+        `${N}✅ 已添加到稍后播: ${author} - ${videoTitle} (${videoId})`,
+      );
+      return videoId;
+    }
+
+    return false;
+  };
+
+  // 开始自动收藏
+  const startAutoCollect = async (fromStart = false) => {
+    if (isRunning) {
+      isPaused = !isPaused;
+      updateButtonState();
+      console.log(`${N}${isPaused ? "⏸ 已暂停" : "▶ 继续运行"}`);
+      return;
+    }
+
+    isRunning = true;
+    isPaused = false;
+    processedCount = 0;
+    updateButtonState();
+
+    const data = getStorageData();
+    const subscribedAuthors = data.subscribedAuthors;
+
+    if (subscribedAuthors.length === 0) {
+      alert("请先设置订阅作者！");
+      isRunning = false;
+      updateButtonState();
+      return;
+    }
+
+    console.log(
+      `${N}🚀 开始自动收藏，订阅作者: ${subscribedAuthors.join(", ")}`,
+    );
+
+    const maxItems = fromStart ? 100 : stopId ? 300 : 100;
+    const stopId = fromStart ? "" : data.lastStopId;
+
+    if (stopId) {
+      console.log(`${N}上次停止位置ID: ${stopId}`);
+    } else {
+      console.log(`${N}从头开始扫描`);
+    }
+
+    let firstId = "";
+    const newAddedIds = [];
+    let processedItemCount = 0;
+
+    // 动态获取items，因为列表会随着滚动而增长
+    while (processedItemCount < maxItems) {
+      while (isPaused && isRunning) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      if (!isRunning) break;
+
+      // 每次循环重新获取当前的item列表
+      const items = document.querySelectorAll(".bili-dyn-list__item");
+      if (processedItemCount >= items.length) {
+        console.log(`${N}⏹ 已处理所有可见动态`);
+        break;
+      }
+
+      const item = items[processedItemCount];
+
+      // 先滚动到item并等待1秒，触发动态加载
+      item.scrollIntoView({ behavior: "smooth", block: "center" });
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const videoId = extractVideoId(item);
+      const videoTitle = extractVideoTitle(item);
+
+      // 记录第一个视频的ID作为下次的停止位置
+      if (processedItemCount === 0 && videoId) {
+        firstId = videoId;
+        console.log(
+          `${N}记录本次第一个视频作为下次停止位置: ${videoTitle} (${videoId})`,
+        );
+      }
+
+      // 如果遇到上次记录的停止位置，说明已经扫描到旧内容了
+      if (stopId && videoId === stopId) {
+        console.log(`${N}⏹ 到达上次停止位置: ${videoTitle} (${stopId})`);
+        break;
+      }
+
+      // 如果已经添加过，标记但继续扫描（不停止）
+      if (videoId && data.addedIds.includes(videoId)) {
+        console.log(`${N}跳过已添加: ${videoTitle} (${videoId})`);
+        item.classList.add("added-to-watch-later");
+        processedItemCount++;
+        continue;
+      }
+
+      const result = await processItem(item, subscribedAuthors, data.addedIds);
+      if (result) {
+        newAddedIds.push(result);
+        processedCount++;
+      }
+
+      processedItemCount++;
+      console.log(`${N}已扫描 ${processedItemCount} 个动态`);
+    }
+
+    if (firstId) {
+      data.lastStopId = firstId;
+    }
+    if (newAddedIds.length > 0) {
+      data.addedIds = [...newAddedIds, ...data.addedIds].slice(0, 100);
+    }
+    saveStorageData(data);
+
+    console.log(
+      `${N}✅ 完成！扫描了 ${processedItemCount} 个动态，添加了 ${processedCount} 个视频`,
+    );
+    isRunning = false;
+    isPaused = false;
+    updateButtonState();
+  };
+
+  // 更新按钮状态
+  const updateButtonState = () => {
+    const btn = document.getElementById("btn-run");
+    if (!btn) return;
+
+    const icons = {
+      play: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="6 3 20 12 6 21 6 3"/></svg>`,
+      pause: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`,
+    };
+
+    if (isRunning) {
+      if (isPaused) {
+        btn.className = "auto-collect-btn paused";
+        btn.innerHTML = `${icons.play}<span>继续</span>`;
+      } else {
+        btn.className = "auto-collect-btn running";
+        btn.innerHTML = `${icons.pause}<span>暂停 (${processedCount})</span>`;
+      }
+    } else {
+      btn.className = "auto-collect-btn";
+      btn.innerHTML = `${icons.play}<span>开始添加</span>`;
+    }
+  };
+
+  // 初始化自动收藏功能
+  const initAutoCollect = () => {
+    if (!document.URL.includes("t.bilibili.com")) return;
+
+    console.log(`${N}✅ 初始化自动收藏功能`);
+
+    // 添加样式
+    const style = document.createElement("style");
+    style.textContent = `
+      .added-to-watch-later{opacity:.5;transition:opacity .3s}
+      .added-to-watch-later:hover{opacity:1}
+      #auto-collect-controls{position:fixed;left:8px;top:70px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+      .auto-collect-btn{display:flex;align-items:center;gap:6px;padding:8px 12px;background:#00a1d6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.15);transition:all .3s}
+      .auto-collect-btn:hover{background:#00b5e5;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+      .auto-collect-btn.running{background:#fb7299}
+      .auto-collect-btn.paused{background:#ff9800}
+      #auto-collect-modal{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.6);z-index:10000;justify-content:center;align-items:center}
+      #auto-collect-modal.show{display:flex}
+      .auto-collect-dialog{background:#fff;border-radius:12px;padding:24px;width:500px;max-width:90vw;max-height:80vh;overflow-y:auto}
+      .auto-collect-dialog h3{margin:0 0 16px;font-size:18px;color:#333}
+      .auto-collect-dialog h4{margin:16px 0 8px;font-size:14px;color:#666}
+      .auto-collect-dialog textarea{width:100%;height:300px;padding:12px;border:1px solid #ddd;border-radius:6px;font-size:14px;font-family:monospace;resize:vertical}
+      .auto-collect-dialog .hint{margin:12px 0;font-size:12px;color:#999}
+      .auto-collect-dialog .gist-section{margin-top:16px;padding-top:16px;border-top:1px solid #eee}
+      .auto-collect-dialog .gist-section input{width:100%;padding:8px 12px;margin-bottom:8px;border:1px solid #ddd;border-radius:6px;font-size:14px}
+      .auto-collect-dialog .btn-gist-sync{width:100%;padding:10px;background:#28a745;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;margin-top:4px}
+      .auto-collect-dialog .btn-gist-sync:hover{background:#218838}
+      .auto-collect-dialog .buttons{display:flex;gap:12px;margin-top:16px}
+      .auto-collect-dialog button{flex:1;padding:10px;border:none;border-radius:6px;cursor:pointer;font-size:14px}
+      .auto-collect-dialog .btn-save{background:#00a1d6;color:#fff}
+      .auto-collect-dialog .btn-cancel{background:#e5e5e5;color:#666}
+    `;
+    document.head.appendChild(style);
+
+    // 创建控制按钮
+    const container = document.createElement("div");
+    container.id = "auto-collect-controls";
+    const icons = {
+      play: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="6 3 20 12 6 21 6 3"/></svg>`,
+      settings: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
+    };
+    const trash = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
+    container.innerHTML = `
+      <button class="auto-collect-btn" id="btn-run">${icons.play}<span>开始添加</span></button>
+      <button class="auto-collect-btn" id="btn-settings">${icons.settings}<span>设置</span></button>
+      <button class="auto-collect-btn" id="btn-clear" style="background:#ff6b6b">${trash}<span>清除记录</span></button>
+    `;
+    document.body.appendChild(container);
+
+    // 创建设置弹窗
+    const modal = document.createElement("div");
+    modal.id = "auto-collect-modal";
+    const data = getStorageData();
+    modal.innerHTML = `
+      <div class="auto-collect-dialog">
+        <h3>订阅作者设置</h3>
+        <textarea id="authors-input" placeholder="一行一个作者名\n支持 // 注释\n空行会被忽略">${data.subscribedAuthorsText || ""}</textarea>
+        <div class="hint">提示：输入你想自动收藏的UP主名字，一行一个<br>支持 // 开头的注释行，空行会被自动过滤</div>
+        <div class="gist-section">
+          <h4>💾 Gist 云同步</h4>
+          <input id="gist-id" placeholder="Gist ID (32位字符)" value="${gistData.id}">
+          <input id="gist-file" placeholder="文件名 (xxx.yaml)" value="${gistData.file}">
+          <input id="gist-token" type="password" placeholder="Token (ghp_...)" value="${gistData.token}">
+          <button class="btn-gist-sync">从 Gist 同步</button>
+        </div>
+        <div class="buttons">
+          <button class="btn-cancel">取消</button>
+          <button class="btn-save">保存</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    // 绑定事件
+    document.getElementById("btn-run").onclick = () => startAutoCollect(false);
+    document.getElementById("btn-settings").onclick = () =>
+      modal.classList.add("show");
+    document.getElementById("btn-clear").onclick = () => {
+      if (confirm("确定要清除上次停止位置记录吗？")) {
+        const data = getStorageData();
+        data.lastStopId = "";
+        saveStorageData(data);
+        console.log(`${N}✅ 已清除停止位置记录`);
+        alert("已清除记录！");
+      }
+    };
+    modal.querySelector(".btn-cancel").onclick = () =>
+      modal.classList.remove("show");
+    modal.querySelector(".btn-save").onclick = async () => {
+      const text = document.getElementById("authors-input").value;
+      const authors = parseAuthors(text);
+      const data = getStorageData();
+      data.subscribedAuthorsText = text; // 保存原始文本（包含注释）
+      data.subscribedAuthors = authors; // 保存清洗后的作者列表
+      data.updateTime = new Date().toISOString(); // 更新时间
+      saveStorageData(data);
+
+      // 保存Gist配置
+      gistData.id = modal.querySelector("#gist-id").value || "";
+      gistData.file = modal.querySelector("#gist-file").value || "";
+      gistData.token = modal.querySelector("#gist-token").value || "";
+      GM_setValue(GIST_KEY, JSON.stringify(gistData));
+
+      modal.classList.remove("show");
+      console.log(`${N}✅ 已保存 ${authors.length} 个订阅作者`);
+
+      // 同步到Gist
+      await syncGist();
+    };
+    modal.querySelector(".btn-gist-sync").onclick = async () => {
+      // 保存Gist配置
+      gistData.id = modal.querySelector("#gist-id").value || "";
+      gistData.file = modal.querySelector("#gist-file").value || "";
+      gistData.token = modal.querySelector("#gist-token").value || "";
+      GM_setValue(GIST_KEY, JSON.stringify(gistData));
+
+      if (!gistData.id || !gistData.file || !gistData.token) {
+        alert("请先填写完整的 Gist 配置信息！");
+        return;
+      }
+
+      try {
+        const gistConfig = await fetchGistContent();
+        const data = getStorageData();
+        data.subscribedAuthorsText = gistConfig.subscribedAuthorsText || "";
+        data.subscribedAuthors = parseAuthors(data.subscribedAuthorsText);
+        data.updateTime = gistConfig.updateTime || "";
+        saveStorageData(data);
+
+        // 更新界面
+        modal.querySelector("#authors-input").value =
+          data.subscribedAuthorsText;
+        console.log(`${N}✅ 已从 Gist 同步配置`);
+        alert("已从 Gist 同步配置！");
+      } catch (error) {
+        console.error(`${N}同步失败:`, error);
+        alert("同步失败，请检查 Gist 配置是否正确！");
+      }
+    };
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.classList.remove("show");
+    };
+    document.getElementById("btn-run").oncontextmenu = (e) => {
+      e.preventDefault();
+      if (confirm("确定要从头开始扫描吗？")) startAutoCollect(true);
+    };
+
+    // 页面加载时标记已添加的视频
+    observe_and_run(
+      ".bili-dyn-list__item",
+      (item) => {
+        const videoId = extractVideoId(item);
+        if (videoId && data.addedIds.includes(videoId)) {
+          item.classList.add("added-to-watch-later");
+        }
+      },
+      false,
+    );
+
+    // 初始化时同步Gist
+    (async () => await syncGist())();
+  };
+  // -------------------------------------------------- 自动收藏到稍后播 - END
+
   // -------------------------------------------------- init - START
   // 初始化动作
   const init = function () {
@@ -363,6 +899,11 @@
     // 稍后播列表页自动化
     if (prop.name == "watchlater-list") {
       autoRefreshWatchLaterList();
+    }
+
+    // 自动收藏功能（动态页）
+    if (prop.name == "activity") {
+      initAutoCollect();
     }
   };
   init();
