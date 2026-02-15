@@ -89,11 +89,11 @@ m: 静音
     originSelector = "body",
     offsetX = 0,
     offsetY = 0,
-    delay = 3
+    delay = 3,
   ) {
     // 检查已有的通知容器
     let notificationElement = document.querySelector(
-      `.notification[data-target="${originSelector}"]`
+      `.notification[data-target="${originSelector}"]`,
     );
     if (notificationElement) {
       console.debug(`${N}notify existed`);
@@ -119,7 +119,7 @@ m: 静音
 
     // 添加样式
     const existingStyle = document.querySelector(
-      `style[data-target="${originSelector}"]`
+      `style[data-target="${originSelector}"]`,
     );
     if (!existingStyle) {
       const style = document.createElement("style");
@@ -144,7 +144,7 @@ m: 静音
   function observe_and_run(
     selector,
     runAfterElementFound,
-    autoDisconnect = true
+    autoDisconnect = true,
   ) {
     const handledElements = new Set();
 
@@ -258,15 +258,34 @@ m: 静音
   // -------------------------------------------------- 音量控制 - START
   const changeVideoVolume = function (v = 0) {
     const LS_videoVolume = "mongolian_player_video_volume"; // 播放音量的存储名
-    let volume = parseFloat(localStorage.getItem(LS_videoVolume)) || 0.5; // 读取音量
-    volume = Math.min(Math.max(volume + v, 0), 1);
-    volume = Number(volume.toFixed(2));
+    const storedVolume = localStorage.getItem(LS_videoVolume);
+    console.log(
+      `${N}🔊 changeVideoVolume called: v=${v}, stored=${storedVolume}, current=${videoObj?.volume}`,
+    );
+
+    let volume = parseFloat(storedVolume) || 0.5; // 读取音量
+
     if (v != 0) {
-      console.debug(`${N}volume(${v}): ${volume}`);
-    }
-    localStorage.setItem(LS_videoVolume, volume);
-    // 因为B站本身已经有了调音功能 所以只记录 不改变音量 不然会改变多次
-    if (v == 0 && videoObj) {
+      // 调整音量
+      volume = Math.min(Math.max(volume + v, 0), 1);
+      volume = Number(volume.toFixed(2));
+      console.log(
+        `${N}🔊 Adjusting volume: ${volume}, saving to localStorage with key: ${LS_videoVolume}`,
+      );
+      localStorage.setItem(LS_videoVolume, volume);
+
+      // 验证是否保存成功
+      const savedCheck = localStorage.getItem(LS_videoVolume);
+      console.log(`${N}🔊 Verify saved: ${savedCheck}`);
+
+      // 实际设置播放器音量
+      if (videoObj) {
+        videoObj.volume = volume;
+        console.log(`${N}🔊 Applied to player: ${videoObj.volume}`);
+      }
+    } else if (videoObj) {
+      // v == 0 时只是载入保存的音量
+      console.log(`${N}🔊 Loading saved volume: ${volume}`);
       videoObj.volume = volume;
     }
   };
@@ -381,7 +400,7 @@ m: 静音
         ".bili-dyn-card-video__mark", //稍后播
         ".relevant-topic-container__item", //话题
         ".bili-dyn-list__notification", //列表顶部的有新动态
-        ".bili-dyn-list-notification" //列表顶部的有新动态
+        ".bili-dyn-list-notification", //列表顶部的有新动态
       );
     } else if (prop.name == "watchlater") {
       // 稍后再看播放页 右侧播放列表中的视频项
@@ -493,7 +512,7 @@ m: 静音
       e.target.tagName === "TEXTAREA" ||
       (e.target.tagName === "INPUT" &&
         ["text", "password", "url", "search", "tel", "email"].includes(
-          e.target.type
+          e.target.type,
         ))
     ) {
       return;
@@ -609,12 +628,12 @@ m: 静音
     // 这里先判断如果是顺序播放，并且当前为列表最后一个视频，则不再继续播。
     // mode 1=正序 2=倒序
     const loopDiv = document.querySelector(
-      '.action-list-header div[title="列表循环"]'
+      '.action-list-header div[title="列表循环"]',
     );
     if (loopDiv) {
       // 获取播放列表
       const itemWraps = document.querySelectorAll(
-        ".action-list-inner .action-list-item-wrap"
+        ".action-list-inner .action-list-item-wrap",
       );
       // 获取最后一个 action-list-item-wrap 元素
       const lastItemWrap = itemWraps[mode == 1 ? itemWraps.length - 1 : 0];
@@ -669,7 +688,7 @@ m: 静音
         videoObj.addEventListener("play", () => {
           console.debug(`${N}Video start to play ▶`);
           changePlaySpeed();
-          changeVideoVolume();
+          // changeVideoVolume(); // 已移除：让B站自己的音量记忆功能生效
         });
       });
 
@@ -685,12 +704,13 @@ m: 静音
       document.addEventListener("keydown", pressKeyDown);
       document.addEventListener("keyup", pressKeyUp);
 
-      // 定期执行，让播放速度和音量统一为设定值
+      // 定期执行，让播放速度统一为设定值
       // 连播目前检测不到 不会重新执行油猴
       // 或是开了多个窗口 调整了其中一个的速度 其他窗口速度并不会跟着变
+      // 注意：音量不需要定期重置，B站自己有音量记忆功能
       setInterval(() => {
         changePlaySpeed();
-        changeVideoVolume();
+        // changeVideoVolume(); // 已移除：会覆盖用户手动调整的音量
       }, 10000);
     } // ------------------------------ isPlayerPage - END
 
