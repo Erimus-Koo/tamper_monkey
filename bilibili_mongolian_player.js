@@ -10,10 +10,8 @@
 // @match        *://*.bilibili.com/bangumi/play/*
 // @match        *://*.bilibili.com/medialist/play/*
 // @match        *://*.bilibili.com/list/*
+// @exclude      *://*.bilibili.com/list/watchlater*
 // @match        *://*.bilibili.com/festival/*
-// @match        *://t.bilibili.com/*
-// @match        *://www.bilibili.com/?*
-// @match        *://www.bilibili.com/watchlater/*/list
 // ==/UserScript==
 
 /* 功能说明
@@ -45,9 +43,6 @@ shift + left:  上一P
   鉴于越来越多UP把视频加入选集，自动连播会播放全部历史视频，所以默认不连播。
   可以点击原本视频右侧的【开启自动连播】字样开启连播。
   因为大部分需要连播的场景是新关注了UP或者打开了教程等，手动开启应该可以接受。
-
-- 稍后看自动删除播放完的视频
-  删除后会自动播放下一个视频，历史记录可以去独立页面查询。
   
 ====================
 从定制转变为B站逐渐支持的（也许有人不知道的）功能
@@ -183,7 +178,6 @@ m: 静音
       bangumi: "video",
       medialist: "unknown",
       list: "playAllVideo", //of certain author
-      "list/watchlater": "watchlater",
       festival: "festival",
     };
     for (let path in pathDict) {
@@ -193,19 +187,6 @@ m: 静音
       }
     }
 
-    // 首页
-    if (url.match(/www\.bilibili\.com\/?($|\?)/)) {
-      prop.name = "home";
-    }
-    if (url.includes(`t.bilibili.com`)) {
-      prop.name = "activity";
-    }
-    if (url.includes(`www.bilibili.com/watchlater`)) {
-      prop.name = "watchlater-list";
-    }
-    if (url.includes(`space.bilibili.com`)) {
-      prop.name = "space";
-    }
     console.debug(N, "🚨 prop:", prop);
     return prop;
   };
@@ -291,93 +272,6 @@ m: 静音
   };
   // -------------------------------------------------- 音量控制 - END
 
-  // -------------------------------------------------- 稍後再看播放页 - START
-  const deleteFinishedVideo = () => {
-    if (document.URL.includes("list/watchlater")) {
-      // 判断当前是列表中的最后一个视频
-      let videoType = "single"; //当前播放的项是单P还是多P
-      const videoList = document.querySelectorAll(".action-list-item-wrap");
-      let currentP = document.querySelector(".siglep-active"); // 单P 列表中的项 还拼错了
-      let multiPList; //多P的列表
-      let currentSubP; //多P的子项
-      if (currentP) {
-        videoType = "single";
-        currentP = currentP.closest(".action-list-item-wrap");
-      } else {
-        currentSubP = document.querySelector(".multip-list-item-active");
-        // 向父级找到当前播放的视频对象 找到含.action-list-item-wrap的
-        if (currentSubP) {
-          videoType = "multi";
-          currentP = currentSubP.closest(".action-list-item-wrap");
-          multiPList = currentP.querySelectorAll(".multip-list-item");
-        }
-      }
-      console.debug(`${N}videoType:`, videoType);
-
-      // 判断当前是否是列表最后一个视频
-      const isLastVideo = currentP == videoList[videoList.length - 1];
-      // 判断当前是否是分P的最后一个视频
-      const isLastSubP =
-        videoType == "multi" &&
-        currentSubP == multiPList[multiPList.length - 1];
-      console.debug(`${N}isLastVideo:`, isLastVideo);
-
-      // 点击删除
-      const displayThenClick = (delBtn) => {
-        if (delBtn) {
-          delBtn.style.display = "block"; // 或根据实际需求 restore 原样式
-          delBtn.click();
-        }
-      };
-      let deletedLastVideo = false;
-      if (videoType == "single") {
-        displayThenClick(currentP.querySelector(".del-btn"));
-        deletedLastVideo = true;
-      } else if (videoType == "multi") {
-        if (isLastSubP) {
-          displayThenClick(currentP.querySelector(".del-btn"));
-        } else {
-          currentSubP.nextElementSibling.click();
-        }
-      }
-
-      // 删除了最后一个视频之后
-      if (deletedLastVideo) {
-        if (videoList.length == 1) {
-          // 删除了列表仅有的一个视频删除后跳转到稍后看列表
-          window.location.href = "https://www.bilibili.com/watchlater/#/list";
-        } else {
-          // 如果列表不止一个视频 删了最后一个 点击第一个
-          if (isLastVideo) {
-            videoList[0].querySelector(".actionlist-item-inner")?.click();
-          }
-        }
-      }
-    }
-  };
-  // -------------------------------------------------- 稍後再看播放页 - END
-
-  // -------------------------------------------------- 稍後再看列表页 - START
-  const autoRefreshWatchLaterList = () => {
-    // 如果稍后播列表内无视频，则自动刷新。如果有则开始播放。
-    if (getPageProperty().name == "watchlater-list") {
-      // 视频列表是后加载的 进入页面直接获取不到 所以等5秒
-      setInterval(() => {
-        if (
-          document.querySelector(".av-item") || //2024
-          document.querySelector(".video-card") //2025
-        ) {
-          // 如果有视频则前往播放页
-          window.location.href = "https://www.bilibili.com/list/watchlater";
-        } else {
-          // 没有就等一会儿刷新
-          setInterval(() => window.location.reload(), 60000);
-        }
-      }, 5000);
-    }
-  };
-  // -------------------------------------------------- 稍後再看列表页 - END
-
   // -------------------------------------------------- 让对象可聚焦 - START
   // 这个部分很多需要配合stylus修改display来实现，不然vimnium会找不到
   const makeElementFocusable = () => {
@@ -391,48 +285,9 @@ m: 静音
     if (prop.type == "player") {
       btnList = btnList.concat(".bpx-player-follow"); // 关注按钮
     }
-    if (prop.name == "home") {
-      // 首页 稍后播
-      btnList = btnList.concat(".bili-watch-later");
-    } else if (prop.name == "activity") {
-      // 动态页
-      btnList = btnList.concat(
-        ".bili-dyn-card-video__mark", //稍后播
-        ".relevant-topic-container__item", //话题
-        ".bili-dyn-list__notification", //列表顶部的有新动态
-        ".bili-dyn-list-notification", //列表顶部的有新动态
-      );
-    } else if (prop.name == "watchlater") {
-      // 稍后再看播放页 右侧播放列表中的视频项
-      btnList = btnList.concat(".actionlist-item-inner");
-    } else if (prop.name == "space") {
-      // 个人页 视频列表
-      btnList = btnList.concat(".i-watchlater");
-    }
     console.debug(N, "🚨 btnList:", btnList);
     for (const selector of btnList) {
       observe_and_run(selector, focusable, false);
-    }
-  };
-
-  const removeFocusable = () => {
-    const a2span = (ele) => {
-      if (ele.tagName.toLowerCase() === "a") {
-        const span = document.createElement("span");
-        span.innerHTML = ele.innerHTML;
-        Array.from(ele.attributes).forEach((attr) => {
-          if (!["href", "target"].includes(attr.name)) {
-            span.setAttribute(attr.name, attr.value);
-          }
-        });
-        // 用 <span> 替换 <a>
-        ele.parentNode.replaceChild(span, ele);
-      }
-    };
-    const prop = getPageProperty();
-    if (prop.name == "home") {
-      // 首页
-      observe_and_run(".bili-video-card__info--tit>a", a2span, false);
     }
   };
   // -------------------------------------------------- 让对象可聚焦 - END
@@ -485,8 +340,6 @@ m: 静音
     // 跳P
     "ArrowLeft,Shift": () => find_n_click(eleDict.playPrev),
     "ArrowRight,Shift": () => find_n_click(eleDict.playNext),
-    // 从稍后播删除当前播放的视频
-    s: deleteFinishedVideo,
   };
   //进度条跳转
   for (let i of Array(10).keys()) {
@@ -657,14 +510,6 @@ m: 静音
 
     // ------------------------------ isPlayerPage - START
     if (prop.type == "player") {
-      if (window.location.href.includes("watchlater")) {
-        // 判断当前页面 如果是稍后播 则自动开启连播
-        autoPlayNext = 1;
-        btnStatusList = ["开启连播", "连播中"];
-        updateBtnStatus();
-        console.log(N, "✅ autoPlayNext:", autoPlayNext);
-      }
-
       // 寻找视频对象 载入播放速度
       observe_and_run(`${eleDict.playerWrapper} video`, (target) => {
         videoObj = find(`${eleDict.playerWrapper} video`); //global
@@ -677,11 +522,7 @@ m: 静音
         videoObj.addEventListener("ended", () => {
           console.debug(`${N}Video ended, try play next...`);
           if (autoPlayNext) {
-            if (prop.name == "watchlater") {
-              deleteFinishedVideo();
-            } else {
-              playNextVideo(autoPlayNext);
-            }
+            playNextVideo(autoPlayNext);
           }
         });
 
@@ -714,38 +555,8 @@ m: 静音
       }, 10000);
     } // ------------------------------ isPlayerPage - END
 
-    // 稍后播按钮
+    // 让关注按钮可聚焦
     makeElementFocusable();
-    if (["home", "activity"].includes(prop.name)) {
-      removeFocusable();
-    }
-
-    // 稍后播列表页自动化
-    if (prop.name == "watchlater-list") {
-      autoRefreshWatchLaterList();
-    }
-
-    // 阿B已自带以下功能，但不确定是否所有播放器都支持，暂留
-
-    // 寻找视频播放器 添加双击切换全屏
-    // observe_and_run(eleDict.playerWrapper, (click_area) => {
-    //     click_area.addEventListener('dblclick', function(e) {
-    //         e.stopPropagation()
-    //         console.log('双击切换全屏')
-    //         find_n_click(eleDict.fullscreen)
-    //     })
-    // })
-
-    // 自动跳到上次播放位置
-    // observe_and_run('.bilibili-player-video-toast-item-jump',continuedBtn=>{
-    //     // 不跳转到其它话(上次看到 xx章节) 只在当前视频中跳转进度
-    //     // 有时候没看片尾 会记录上一集的片尾位置之类的
-    //     let continuedText = find('.bilibili-player-video-toast-item-text').innerHTML
-    //     debug('Continue Text:', continuedText)
-    //     if (continuedText.includes(' ')) {
-    //         continuedBtn.click()
-    //     }
-    // })
   };
   init();
   // -------------------------------------------------- init - END
