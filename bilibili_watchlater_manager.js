@@ -594,8 +594,8 @@
       `${N}🚀 开始自动收藏，订阅作者: ${subscribedAuthors.join(", ")}`,
     );
 
-    const maxItems = fromStart ? 100 : stopId ? 300 : 100;
     const stopId = fromStart ? "" : data.lastStopId;
+    const maxItems = fromStart ? 100 : stopId ? 300 : 100;
 
     if (stopId) {
       console.log(`${N}上次停止位置ID: ${stopId}`);
