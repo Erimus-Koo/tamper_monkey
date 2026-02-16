@@ -214,6 +214,13 @@
     if (getPageProperty().name == "watchlater-list") {
       console.log(`${N}检测到稍后播列表页，启动自动刷新/播放逻辑`);
 
+      // 获取刷新次数
+      const REFRESH_COUNT_KEY = "bilibili_watchlater_refresh_count";
+      let refreshCount = parseInt(
+        localStorage.getItem(REFRESH_COUNT_KEY) || "0",
+      );
+      console.log(`${N}当前刷新次数: ${refreshCount}/10`);
+
       // 2. 视频列表是后加载的，进入页面直接获取不到，所以等5秒后再检查
       setInterval(() => {
         console.log(`${N}检查稍后播列表是否有视频...`);
@@ -227,10 +234,21 @@
           console.log(
             `${N}发现视频，跳转到播放页: https://www.bilibili.com/list/watchlater`,
           );
+          // 重置刷新次数
+          localStorage.removeItem(REFRESH_COUNT_KEY);
           window.location.href = "https://www.bilibili.com/list/watchlater";
         } else {
-          // 5. 如果没有视频，等60秒后刷新页面（可能有新视频加入）
-          console.log(`${N}列表为空，60秒后刷新页面`);
+          // 5. 如果没有视频，检查刷新次数
+          if (refreshCount >= 10) {
+            console.log(`${N}已刷新10次，列表仍为空，停止刷新`);
+            localStorage.removeItem(REFRESH_COUNT_KEY);
+            return;
+          }
+
+          // 6. 增加刷新次数并等60秒后刷新页面
+          refreshCount++;
+          localStorage.setItem(REFRESH_COUNT_KEY, refreshCount.toString());
+          console.log(`${N}列表为空，60秒后刷新页面 (第${refreshCount}次)`);
           setInterval(() => window.location.reload(), 60000);
         }
       }, 5000);
