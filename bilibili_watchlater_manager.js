@@ -724,12 +724,20 @@
       .auto-collect-dialog{background:#fff;border-radius:12px;padding:24px;width:500px;max-width:90vw;max-height:80vh;overflow-y:auto}
       .auto-collect-dialog h3{margin:0 0 16px;font-size:18px;color:#333}
       .auto-collect-dialog h4{margin:16px 0 8px;font-size:14px;color:#666}
+      .auto-collect-dialog .tab-buttons{display:flex;gap:8px;margin-bottom:16px}
+      .auto-collect-dialog .tab-btn{flex:1;padding:10px;background:#f0f0f0;border:none;border-radius:6px;cursor:pointer;font-size:14px;color:#666}
+      .auto-collect-dialog .tab-btn.active{background:#00a1d6;color:#fff;font-weight:600}
+      .auto-collect-dialog .tab-content{display:none}
+      .auto-collect-dialog .tab-content.active{display:block}
       .auto-collect-dialog textarea{width:100%;height:300px;padding:12px;border:1px solid #ddd;border-radius:6px;font-size:14px;font-family:monospace;resize:vertical}
       .auto-collect-dialog .hint{margin:12px 0;font-size:12px;color:#999}
       .auto-collect-dialog .gist-section{margin-top:16px;padding-top:16px;border-top:1px solid #eee}
       .auto-collect-dialog .gist-section input{width:100%;padding:8px 12px;margin-bottom:8px;border:1px solid #ddd;border-radius:6px;font-size:14px}
       .auto-collect-dialog .btn-gist-sync{width:100%;padding:10px;background:#28a745;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;margin-top:4px}
       .auto-collect-dialog .btn-gist-sync:hover{background:#218838}
+      .auto-collect-dialog .btn-clear-record{width:100%;padding:10px;background:#ff6b6b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;margin-top:12px}
+      .auto-collect-dialog .btn-clear-record:hover{background:#ff5252}
+      .added-to-watch-later.last-stop-position{outline:1px solid #000}
       .auto-collect-dialog .buttons{display:flex;gap:12px;margin-top:16px}
       .auto-collect-dialog button{flex:1;padding:10px;border:none;border-radius:6px;cursor:pointer;font-size:14px}
       .auto-collect-dialog .btn-save{background:#00a1d6;color:#fff}
@@ -744,11 +752,9 @@
       play: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="6 3 20 12 6 21 6 3"/></svg>`,
       settings: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
     };
-    const trash = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
     container.innerHTML = `
       <button class="auto-collect-btn" id="btn-run">${icons.play}<span>开始添加</span></button>
       <button class="auto-collect-btn" id="btn-settings">${icons.settings}<span>设置</span></button>
-      <button class="auto-collect-btn" id="btn-clear" style="background:#ff6b6b">${trash}<span>清除记录</span></button>
     `;
     document.body.appendChild(container);
 
@@ -758,15 +764,28 @@
     const data = getStorageData();
     modal.innerHTML = `
       <div class="auto-collect-dialog">
-        <h3>订阅作者设置</h3>
-        <textarea id="authors-input" placeholder="一行一个作者名\n支持 // 注释\n空行会被忽略">${data.subscribedAuthorsText || ""}</textarea>
-        <div class="hint">提示：输入你想自动收藏的UP主名字，一行一个<br>支持 // 开头的注释行，空行会被自动过滤</div>
-        <div class="gist-section">
-          <h4>💾 Gist 云同步</h4>
-          <input id="gist-id" placeholder="Gist ID (32位字符)" value="${gistData.id}">
-          <input id="gist-file" placeholder="文件名 (xxx.yaml)" value="${gistData.file}">
-          <input id="gist-token" type="password" placeholder="Token (ghp_...)" value="${gistData.token}">
-          <button class="btn-gist-sync">从 Gist 同步</button>
+        <h3>自动添加到稍后播 - 设置</h3>
+        <div class="tab-buttons">
+          <button class="tab-btn active" data-tab="authors">订阅作者</button>
+          <button class="tab-btn" data-tab="settings">高级设置</button>
+        </div>
+        <div class="tab-content active" data-tab="authors">
+          <textarea id="authors-input" placeholder="一行一个作者名\n支持 // 注释\n空行会被忽略">${data.subscribedAuthorsText || ""}</textarea>
+          <div class="hint">提示：输入你想自动添加到稍后播的UP主名字，一行一个<br>支持 // 开头的注释行，空行会被自动过滤</div>
+        </div>
+        <div class="tab-content" data-tab="settings">
+          <div class="gist-section">
+            <h4>💾 Gist 云同步</h4>
+            <input id="gist-id" placeholder="Gist ID (32位字符)" value="${gistData.id}">
+            <input id="gist-file" placeholder="文件名 (xxx.yaml)" value="${gistData.file}">
+            <input id="gist-token" type="password" placeholder="Token (ghp_...)" value="${gistData.token}">
+            <button class="btn-gist-sync">从 Gist 同步</button>
+          </div>
+          <div class="gist-section">
+            <h4>🗑️ 清除记录</h4>
+            <button class="btn-clear-record">清除上次停止位置</button>
+            <div class="hint">清除后下次运行将从头扫描100条</div>
+          </div>
         </div>
         <div class="buttons">
           <button class="btn-cancel">取消</button>
@@ -777,11 +796,54 @@
     document.body.appendChild(modal);
 
     // 绑定事件
-    document.getElementById("btn-run").onclick = () => startAutoCollect(false);
+    // Tab切换
+    modal.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.onclick = () => {
+        const tab = btn.dataset.tab;
+        modal
+          .querySelectorAll(".tab-btn, .tab-content")
+          .forEach((el) => el.classList.remove("active"));
+        modal
+          .querySelector(`.tab-btn[data-tab="${tab}"]`)
+          .classList.add("active");
+        modal
+          .querySelector(`.tab-content[data-tab="${tab}"]`)
+          .classList.add("active");
+      };
+    });
+
+    document.getElementById("btn-run").onclick = () => {
+      const data = getStorageData();
+
+      // 如果列表为空，打开设置
+      if (!data.subscribedAuthors || data.subscribedAuthors.length === 0) {
+        modal.classList.add("show");
+        alert("请先在设置中添加订阅作者！");
+        return;
+      }
+
+      // 如果没有stopId，提示用户
+      if (!data.lastStopId) {
+        const confirmed = confirm(
+          "首次运行将扫描最新的100条动态。\n\n" +
+            "下次运行时会自动从本次停止的位置继续扫描。\n\n" +
+            "是否开始？",
+        );
+        if (!confirmed) return;
+      }
+
+      startAutoCollect(false);
+    };
+
     document.getElementById("btn-settings").onclick = () =>
       modal.classList.add("show");
-    document.getElementById("btn-clear").onclick = () => {
-      if (confirm("确定要清除上次停止位置记录吗？")) {
+
+    modal.querySelector(".btn-clear-record").onclick = () => {
+      if (
+        confirm(
+          "确定要清除上次停止位置记录吗？\n\n清除后下次运行将从头扫描100条。",
+        )
+      ) {
         const data = getStorageData();
         data.lastStopId = "";
         saveStorageData(data);
@@ -850,13 +912,17 @@
       if (confirm("确定要从头开始扫描吗？")) startAutoCollect(true);
     };
 
-    // 页面加载时标记已添加的视频
+    // 页面加载时标记已添加的视频和上次停止位置
     observe_and_run(
       ".bili-dyn-list__item",
       (item) => {
         const videoId = extractVideoId(item);
         if (videoId && data.addedIds.includes(videoId)) {
           item.classList.add("added-to-watch-later");
+        }
+        // 标记上次停止位置
+        if (videoId && data.lastStopId && videoId === data.lastStopId) {
+          item.classList.add("added-to-watch-later", "last-stop-position");
         }
       },
       false,
