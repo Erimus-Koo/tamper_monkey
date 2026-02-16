@@ -9,8 +9,8 @@
 // @grant        GM_getValue
 // @grant        GM_xmlhttpRequest
 
-// @match        *://www.bilibili.com/watchlater/*/list
-// @match        *://www.bilibili.com/list/watchlater
+// @match        *://www.bilibili.com/watchlater/list*
+// @match        *://www.bilibili.com/list/watchlater*
 // @match        *://www.bilibili.com/?*
 // @match        *://t.bilibili.com/*
 // @match        *://space.bilibili.com/*
@@ -109,7 +109,7 @@
       bangumi: "video",
       medialist: "unknown",
       list: "playAllVideo", //of certain author
-      "list/watchlater": "watchlater",
+      "list/watchlater": "watchlater", // 稍后播播放页
       festival: "festival",
     };
     for (let path in pathDict) {
@@ -123,16 +123,19 @@
     if (url.match(/www\.bilibili\.com\/?($|\?)/)) {
       prop.name = "home";
     }
+    // 动态页（关注列表）
     if (url.includes(`t.bilibili.com`)) {
       prop.name = "activity";
     }
-    if (url.includes(`www.bilibili.com/watchlater`)) {
+    // 稍后播列表页（注意：要在 list/watchlater 之后判断，避免被覆盖）
+    if (url.includes(`www.bilibili.com/watchlater/list`)) {
       prop.name = "watchlater-list";
     }
+    // 个人空间
     if (url.includes(`space.bilibili.com`)) {
       prop.name = "space";
     }
-    console.debug(N, "🚨 prop:", prop);
+    console.debug(N, "🚨 prop:", prop, "url:", url);
     return prop;
   };
   // -------------------------------------------------- 判断页面类型 - END
@@ -205,18 +208,29 @@
 
   // -------------------------------------------------- 稍後再看列表页 - START
   const autoRefreshWatchLaterList = () => {
-    // 如果稍后播列表内无视频，则自动刷新。如果有则开始播放。
+    // 功能：如果稍后播列表内无视频，则自动刷新。如果有视频则跳转到播放页自动播放。
+
+    // 1. 检查当前页面是否是稍后播列表页
     if (getPageProperty().name == "watchlater-list") {
-      // 视频列表是后加载的 进入页面直接获取不到 所以等5秒
+      console.log(`${N}检测到稍后播列表页，启动自动刷新/播放逻辑`);
+
+      // 2. 视频列表是后加载的，进入页面直接获取不到，所以等5秒后再检查
       setInterval(() => {
-        if (
-          document.querySelector(".av-item") || //2024
-          document.querySelector(".video-card") //2025
-        ) {
-          // 如果有视频则前往播放页
+        console.log(`${N}检查稍后播列表是否有视频...`);
+
+        // 3. 检查页面上是否有视频卡片（兼容2024和2025版本的选择器）
+        const hasVideo2024 = document.querySelector(".av-item");
+        const hasVideo2025 = document.querySelector(".video-card");
+
+        if (hasVideo2024 || hasVideo2025) {
+          // 4. 如果有视频，跳转到播放页（会自动播放第一个视频）
+          console.log(
+            `${N}发现视频，跳转到播放页: https://www.bilibili.com/list/watchlater`,
+          );
           window.location.href = "https://www.bilibili.com/list/watchlater";
         } else {
-          // 没有就等一会儿刷新
+          // 5. 如果没有视频，等60秒后刷新页面（可能有新视频加入）
+          console.log(`${N}列表为空，60秒后刷新页面`);
           setInterval(() => window.location.reload(), 60000);
         }
       }, 5000);
@@ -715,7 +729,7 @@
       }
     } else {
       btn.className = "auto-collect-btn";
-      btn.innerHTML = `${icons.play}<span>开始添加</span>`;
+      btn.innerHTML = `${icons.play}<span>开始</span>`;
     }
   };
 
@@ -990,6 +1004,9 @@
 
     // 稍后播列表页自动化
     if (prop.name == "watchlater-list") {
+      console.log(
+        `${N}✅ 检测到稍后播列表页，调用 autoRefreshWatchLaterList()`,
+      );
       autoRefreshWatchLaterList();
     }
 
