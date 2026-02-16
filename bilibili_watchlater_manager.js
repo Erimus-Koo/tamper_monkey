@@ -571,7 +571,7 @@
     if (isRunning) {
       isPaused = !isPaused;
       updateButtonState();
-      console.log(`${N}${isPaused ? "⏸ 已暂停" : "▶ 继续运行"}`);
+      console.log(`${N}${isPaused ? "⏸ 暂停" : "▶ 继续"}`);
       return;
     }
 
@@ -671,6 +671,22 @@
     }
     saveStorageData(data);
 
+    // 更新页面上的停止位置标记
+    if (firstId) {
+      // 移除所有旧的停止位置标记
+      document.querySelectorAll(".last-stop-position").forEach((item) => {
+        item.classList.remove("last-stop-position");
+      });
+
+      // 给新的停止位置添加标记
+      document.querySelectorAll(".bili-dyn-list__item").forEach((item) => {
+        const videoId = extractVideoId(item);
+        if (videoId === firstId) {
+          item.classList.add("last-stop-position");
+        }
+      });
+    }
+
     console.log(
       `${N}✅ 完成！扫描了 ${processedItemCount} 个动态，添加了 ${processedCount} 个视频`,
     );
@@ -715,8 +731,8 @@
       .bili-dyn-list__item{position:relative}
       .added-to-watch-later{opacity:.5;transition:opacity .3s}
       .added-to-watch-later:hover{opacity:1}
-      .added-to-watch-later:after{
-        content:'已添加';position:absolute;top:1rem;right:3rem;background:#F69;color:#FFF;padding:.25em .5em;border-radius:.25em;
+      .added-to-watch-later .bili-dyn-card-video__stat:after{
+        content:'已加入稍后再看';color:#F69;
       }
       #auto-collect-controls{position:fixed;left:8px;top:74px;z-index:9999;display:flex;flex-direction:column;gap:8px}
       .auto-collect-btn{display:flex;align-items:center;gap:6px;padding:8px 12px;background:#00a1d6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.15);transition:all .3s}
@@ -745,7 +761,7 @@
       .auto-collect-dialog .btn-clear-record{width:100%;padding:10px;background:#ff6b6b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;margin-top:12px}
       .auto-collect-dialog .btn-clear-record:hover{background:#ff5252}
       .last-stop-position:after{
-        content:'上次看到这里';position:absolute;top:0;left:50%;transform:translateX(-50%);background:#000;color:#FFF;padding:.25em .5em;border-radius:0 0 .5em .5em;
+        content:'上次看到这里';position:absolute;top:0;left:50%;transform:translateX(-50%);background:#000;color:#FFF;padding:.125em .5em;border-radius:0 0 .5em .5em;
       }
       .last-stop-position .bili-dyn-item{outline:2px solid #000}
       .auto-collect-dialog .buttons{display:flex;gap:12px;margin-top:16px}
