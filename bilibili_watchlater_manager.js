@@ -712,24 +712,31 @@
     // 添加样式
     const style = document.createElement("style");
     style.textContent = `
+      .bili-dyn-list__item{position:relative}
       .added-to-watch-later{opacity:.5;transition:opacity .3s}
       .added-to-watch-later:hover{opacity:1}
-      #auto-collect-controls{position:fixed;left:8px;top:70px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+      .added-to-watch-later:after{
+        content:'已添加';position:absolute;top:1rem;right:3rem;background:#F69;color:#FFF;padding:.25em .5em;border-radius:.25em;
+      }
+      #auto-collect-controls{position:fixed;left:8px;top:74px;z-index:9999;display:flex;flex-direction:column;gap:8px}
       .auto-collect-btn{display:flex;align-items:center;gap:6px;padding:8px 12px;background:#00a1d6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.15);transition:all .3s}
       .auto-collect-btn:hover{background:#00b5e5;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.2)}
       .auto-collect-btn.running{background:#fb7299}
       .auto-collect-btn.paused{background:#ff9800}
       #auto-collect-modal{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.6);z-index:10000;justify-content:center;align-items:center}
       #auto-collect-modal.show{display:flex}
-      .auto-collect-dialog{background:#fff;border-radius:12px;padding:24px;width:500px;max-width:90vw;max-height:80vh;overflow-y:auto}
+      .auto-collect-dialog{background:#fff;border-radius:1em;padding:1.5em;width:500px;max-width:90vw;height:80vh;display:flex;flex-flow:column nowrap;}
+      .auto-collect-dialog *{box-sizing:border-box;}
+      .auto-collect-dialog>*{flex:none;}
+      .auto-collect-dialog>.tab-content{flex:1!important;overflow-y:auto;}
       .auto-collect-dialog h3{margin:0 0 16px;font-size:18px;color:#333}
       .auto-collect-dialog h4{margin:16px 0 8px;font-size:14px;color:#666}
-      .auto-collect-dialog .tab-buttons{display:flex;gap:8px;margin-bottom:16px}
+      .auto-collect-dialog .tab-buttons{display:flex;gap:1px;margin-bottom:16px;background:#0001;padding:1px;}
       .auto-collect-dialog .tab-btn{flex:1;padding:10px;background:#f0f0f0;border:none;border-radius:6px;cursor:pointer;font-size:14px;color:#666}
       .auto-collect-dialog .tab-btn.active{background:#00a1d6;color:#fff;font-weight:600}
       .auto-collect-dialog .tab-content{display:none}
-      .auto-collect-dialog .tab-content.active{display:block}
-      .auto-collect-dialog textarea{width:100%;height:300px;padding:12px;border:1px solid #ddd;border-radius:6px;font-size:14px;font-family:monospace;resize:vertical}
+      .auto-collect-dialog .tab-content.active{display:flex;flex-flow:column nowrap;height:100%;}
+      .auto-collect-dialog textarea{width:100%;height:100%;padding:12px;border:1px solid #ddd;border-radius:6px;font-size:14px;resize:vertical;font-family:sans-serif;}
       .auto-collect-dialog .hint{margin:12px 0;font-size:12px;color:#999}
       .auto-collect-dialog .gist-section{margin-top:16px;padding-top:16px;border-top:1px solid #eee}
       .auto-collect-dialog .gist-section input{width:100%;padding:8px 12px;margin-bottom:8px;border:1px solid #ddd;border-radius:6px;font-size:14px}
@@ -737,7 +744,10 @@
       .auto-collect-dialog .btn-gist-sync:hover{background:#218838}
       .auto-collect-dialog .btn-clear-record{width:100%;padding:10px;background:#ff6b6b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;margin-top:12px}
       .auto-collect-dialog .btn-clear-record:hover{background:#ff5252}
-      .added-to-watch-later.last-stop-position{outline:1px solid #000}
+      .last-stop-position:after{
+        content:'上次看到这里';position:absolute;top:0;left:50%;transform:translateX(-50%);background:#000;color:#FFF;padding:.25em .5em;border-radius:0 0 .5em .5em;
+      }
+      .last-stop-position .bili-dyn-item{outline:2px solid #000}
       .auto-collect-dialog .buttons{display:flex;gap:12px;margin-top:16px}
       .auto-collect-dialog button{flex:1;padding:10px;border:none;border-radius:6px;cursor:pointer;font-size:14px}
       .auto-collect-dialog .btn-save{background:#00a1d6;color:#fff}
@@ -753,7 +763,7 @@
       settings: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
     };
     container.innerHTML = `
-      <button class="auto-collect-btn" id="btn-run">${icons.play}<span>开始添加</span></button>
+      <button class="auto-collect-btn" id="btn-run">${icons.play}<span>开始</span></button>
       <button class="auto-collect-btn" id="btn-settings">${icons.settings}<span>设置</span></button>
     `;
     document.body.appendChild(container);
@@ -920,9 +930,9 @@
         if (videoId && data.addedIds.includes(videoId)) {
           item.classList.add("added-to-watch-later");
         }
-        // 标记上次停止位置
+        // 标记上次停止位置（只要扫描过就标记，不一定要添加过）
         if (videoId && data.lastStopId && videoId === data.lastStopId) {
-          item.classList.add("added-to-watch-later", "last-stop-position");
+          item.classList.add("last-stop-position");
         }
       },
       false,
