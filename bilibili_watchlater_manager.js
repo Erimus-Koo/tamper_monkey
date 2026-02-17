@@ -743,7 +743,7 @@
         btn.innerHTML = `${icons.play}<span>继续</span>`;
       } else {
         btn.className = "auto-collect-btn running";
-        btn.innerHTML = `${icons.pause}<span>暂停 (${processedCount})</span>`;
+        btn.innerHTML = `${icons.pause}<span>暂停</span>`;
       }
     } else {
       btn.className = "auto-collect-btn";
