@@ -46,7 +46,7 @@
 
     // 选择器：data-testid和class都要匹配
     const img = container.querySelector(
-      'img[data-testid="in_painting_picture"]'
+      'img[data-testid="in_painting_picture"]',
     );
     if (!img) {
       alert("未找到图片元素！");
@@ -100,7 +100,7 @@
   const deleteChat = () => {
     // 获取所有外框（从后向前）
     const blocks = Array.from(
-      document.querySelectorAll('div[data-testid="message-block-container"]')
+      document.querySelectorAll('div[data-testid="message-block-container"]'),
     );
     let targetBlock = null;
     for (let i = blocks.length - 1; i >= 0; i--) {
@@ -114,7 +114,7 @@
 
     // 找到外框里的 more 按钮并点击
     const moreBtn = targetBlock.querySelector(
-      '[data-testid="message_action_more"]'
+      '[data-testid="message_action_more"]',
     );
     if (!moreBtn) return;
     moreBtn.click(); // TODO 无效 需更新
@@ -122,7 +122,7 @@
     // 点击二级菜单中的删除
     setTimeout(() => {
       const li = document.querySelector(
-        'ul.semi-dropdown-menu li[class*="danger"]'
+        'ul.semi-dropdown-menu li[class*="danger"]',
       );
       if (li) {
         ["mouseover", "mousedown", "mouseup", "click"].forEach((type) => {
@@ -131,7 +131,7 @@
               bubbles: true,
               cancelable: true,
               view: window,
-            })
+            }),
           );
         });
       }
@@ -181,7 +181,7 @@
     // 重新生成
     if (modifier && e.key.toLowerCase() === "r") {
       const btnList = document.querySelectorAll(
-        'button[data-testid="message_action_regenerate"]'
+        'button[data-testid="message_action_regenerate"]',
       );
       btnList[btnList.length - 1].click();
     }
@@ -192,14 +192,14 @@
       document.querySelector('div[class*="to-bottom-button"]')?.click();
       // 点击最后一条聊天记录的第一张可见图
       const chats = document.querySelectorAll(
-        'div[data-testid="receive_message"]'
+        'div[data-testid="receive_message"]',
       );
       const lastChat = chats[chats.length - 1];
       lastChat?.focus();
 
       if (lastChat) {
         const images = lastChat.querySelectorAll(
-          'div[data-testid="mdbox_image"]'
+          'div[data-testid="mdbox_image"]',
         );
         for (const imgDiv of images) {
           // 判断可见性
@@ -285,8 +285,8 @@
   // 让缩略图可以被Vimnium点击 -------------------------------- END
 
   // 自动点击图片生成 -------------------------------- START
-  if (location.href.replace(/\/$/, "") === "https://www.doubao.com/chat") {
-    window.location.href = "https://www.doubao.com/chat/create-image";
-  }
+  // if (location.href.replace(/\/$/, "") === "https://www.doubao.com/chat") {
+  //   window.location.href = "https://www.doubao.com/chat/create-image";
+  // }
   // 自动点击图片生成 -------------------------------- END
 })();
