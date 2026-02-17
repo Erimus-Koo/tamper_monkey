@@ -10,7 +10,6 @@
 // @match        *://*.bilibili.com/bangumi/play/*
 // @match        *://*.bilibili.com/medialist/play/*
 // @match        *://*.bilibili.com/list/*
-// @exclude      *://*.bilibili.com/list/watchlater*
 // @match        *://*.bilibili.com/festival/*
 // ==/UserScript==
 
@@ -178,6 +177,7 @@ m: 静音
       bangumi: "video",
       medialist: "unknown",
       list: "playAllVideo", //of certain author
+      "list/watchlater": "watchlater", // 稍后播播放页
       festival: "festival",
     };
     for (let path in pathDict) {
@@ -400,7 +400,7 @@ m: 静音
   // -------------------------------------------------- shortcut - END
 
   // -------------------------------------------------- 自动连播 - START
-  let autoPlayNext = 0; //0=stop; 1=next; -1=prev
+  let autoPlayNext = 0; // 默认关闭连播，稍后播页面会在 init 时设置为 1
   let btnStatusList = ["开启连播", "正序连播中", "倒序连播中"];
 
   const setupPlayNextButton = (button) => {
@@ -460,6 +460,12 @@ m: 静音
   };
 
   const addAutoPlayNextBtn = (nextBtn) => {
+    // 防止重复添加按钮
+    if (document.querySelector(".auto-play-next-video")) {
+      console.debug(`${N}连播按钮已存在，跳过添加`);
+      return;
+    }
+
     // listTitle 是播放列表右上角的原连播按钮左侧的文字
     const listTitle = document.querySelector(".next-button .txt");
     if (listTitle) {
@@ -479,25 +485,109 @@ m: 静音
   function playNextVideo(mode) {
     // B站的列表（播放全部 稍后播）默认会循环播放，为了点播放量B脸都不要了。
     // 这里先判断如果是顺序播放，并且当前为列表最后一个视频，则不再继续播。
-    // mode 1=正序 2=倒序
-    const loopDiv = document.querySelector(
-      '.action-list-header div[title="列表循环"]',
-    );
-    if (loopDiv) {
-      // 获取播放列表
-      const itemWraps = document.querySelectorAll(
-        ".action-list-inner .action-list-item-wrap",
+    // mode 1=正序 -1=倒序
+
+    // 检查是否是稍后播页面
+    const isWatchLater = document.URL.includes("list/watchlater");
+
+    if (isWatchLater) {
+      // 稍后播：删除当前视频
+      deleteFinishedVideoInWatchLater();
+
+      // 如果是倒序模式，等待0.5秒后点击上一个按钮
+      if (mode === -1) {
+        setTimeout(() => {
+          console.log(`${N}[稍后播] 倒序模式，点击上一个视频`);
+          find_n_click(eleDict.playPrev);
+        }, 500);
+      }
+      // 正序模式下，删除后会自动播放下一个，不需要额外操作
+    } else {
+      // 普通列表：检查是否到达列表末尾
+      const loopDiv = document.querySelector(
+        '.action-list-header div[title="列表循环"]',
       );
-      // 获取最后一个 action-list-item-wrap 元素
-      const lastItemWrap = itemWraps[mode == 1 ? itemWraps.length - 1 : 0];
-      // 检查最后一个元素是否含有 siglep-active 类
-      if (lastItemWrap.querySelector(".siglep-active")) {
-        console.debug(`${N}This is the last video`);
-        return;
+      if (loopDiv) {
+        // 获取播放列表
+        const itemWraps = document.querySelectorAll(
+          ".action-list-inner .action-list-item-wrap",
+        );
+        // 获取最后一个 action-list-item-wrap 元素
+        const lastItemWrap = itemWraps[mode == 1 ? itemWraps.length - 1 : 0];
+        // 检查最后一个元素是否含有 siglep-active 类
+        if (lastItemWrap.querySelector(".siglep-active")) {
+          console.debug(`${N}This is the last video`);
+          return;
+        }
+      }
+      // 点击下一个视频
+      find_n_click(mode == 1 ? eleDict.playNext : eleDict.playPrev);
+    }
+  }
+
+  // 稍后播：删除已播放的视频
+  function deleteFinishedVideoInWatchLater() {
+    console.log(`${N}[稍后播] 删除已播放视频`);
+
+    let videoType = "single"; //当前播放的项是单P还是多P
+    const videoList = document.querySelectorAll(".action-list-item-wrap");
+    let currentP = document.querySelector(".siglep-active"); // 单P 列表中的项
+    let multiPList; //多P的列表
+    let currentSubP; //多P的子项
+
+    if (currentP) {
+      videoType = "single";
+      currentP = currentP.closest(".action-list-item-wrap");
+    } else {
+      currentSubP = document.querySelector(".multip-list-item-active");
+      if (currentSubP) {
+        videoType = "multi";
+        currentP = currentSubP.closest(".action-list-item-wrap");
+        multiPList = currentP.querySelectorAll(".multip-list-item");
       }
     }
-    // 点击下一个视频
-    find_n_click(mode == 1 ? eleDict.playNext : eleDict.playPrev);
+
+    console.debug(`${N}[稍后播] videoType:`, videoType);
+
+    // 判断当前是否是列表最后一个视频
+    const isLastVideo = currentP == videoList[videoList.length - 1];
+    // 判断当前是否是分P的最后一个视频
+    const isLastSubP =
+      videoType == "multi" && currentSubP == multiPList[multiPList.length - 1];
+
+    // 点击删除
+    const displayThenClick = (delBtn) => {
+      if (delBtn) {
+        delBtn.style.display = "block";
+        delBtn.click();
+      }
+    };
+
+    let deletedLastVideo = false;
+    if (videoType == "single") {
+      displayThenClick(currentP.querySelector(".del-btn"));
+      deletedLastVideo = true;
+    } else if (videoType == "multi") {
+      if (isLastSubP) {
+        displayThenClick(currentP.querySelector(".del-btn"));
+        deletedLastVideo = true;
+      } else {
+        currentSubP.nextElementSibling.click();
+      }
+    }
+
+    // 删除了最后一个视频之后
+    if (deletedLastVideo) {
+      if (videoList.length == 1) {
+        // 删除了列表仅有的一个视频，跳转到稍后看列表
+        window.location.href = "https://www.bilibili.com/watchlater/#/list";
+      } else {
+        // 如果列表不止一个视频，删了最后一个，点击第一个
+        if (isLastVideo) {
+          videoList[0].querySelector(".actionlist-item-inner")?.click();
+        }
+      }
+    }
   }
   // -------------------------------------------------- 自动连播 - END
 
@@ -507,6 +597,12 @@ m: 静音
     console.debug(`${N}Init:`, window.location.href);
 
     const prop = getPageProperty();
+
+    // 稍后播页面默认开启正序连播
+    if (prop.name === "watchlater") {
+      autoPlayNext = 1;
+      console.log(`${N}稍后播页面，默认开启正序连播`);
+    }
 
     // ------------------------------ isPlayerPage - START
     if (prop.type == "player") {
@@ -520,7 +616,7 @@ m: 静音
         // B站自动连播现在会自动播放推荐视频，包括播放列表以外的内容，
         // 单P视频也会连播，此处应有蒙古上单名言。
         videoObj.addEventListener("ended", () => {
-          console.debug(`${N}Video ended, try play next...`);
+          console.debug(`${N}Video ended, autoPlayNext: ${autoPlayNext}`);
           if (autoPlayNext) {
             playNextVideo(autoPlayNext);
           }
@@ -538,8 +634,9 @@ m: 静音
         fullScreenBtn.click();
       });
 
-      // 寻找播放下一个按钮并插入开关
+      // 寻找播放下一个或上一个按钮并插入开关（任意一个出现即可）
       observe_and_run(eleDict.playNext, addAutoPlayNextBtn);
+      observe_and_run(eleDict.playPrev, addAutoPlayNextBtn);
 
       // 添加快捷键监听
       document.addEventListener("keydown", pressKeyDown);

@@ -819,7 +819,6 @@
     // 创建设置弹窗
     const modal = document.createElement("div");
     modal.id = "auto-collect-modal";
-    const data = getStorageData();
     modal.innerHTML = `
       <div class="auto-collect-dialog">
         <h3>自动添加到稍后播 - 设置</h3>
@@ -828,15 +827,15 @@
           <button class="tab-btn" data-tab="settings">高级设置</button>
         </div>
         <div class="tab-content active" data-tab="authors">
-          <textarea id="authors-input" placeholder="一行一个作者名\n支持 // 注释\n空行会被忽略">${data.subscribedAuthorsText || ""}</textarea>
+          <textarea id="authors-input" placeholder="一行一个作者名\n支持 // 注释\n空行会被忽略"></textarea>
           <div class="hint">提示：输入你想自动添加到稍后播的UP主名字，一行一个<br>支持 // 开头的注释行，空行会被自动过滤</div>
         </div>
         <div class="tab-content" data-tab="settings">
           <div class="gist-section">
             <h4>💾 Gist 云同步</h4>
-            <input id="gist-id" placeholder="Gist ID (32位字符)" value="${gistData.id}">
-            <input id="gist-file" placeholder="文件名 (xxx.yaml)" value="${gistData.file}">
-            <input id="gist-token" type="password" placeholder="Token (ghp_...)" value="${gistData.token}">
+            <input id="gist-id" placeholder="Gist ID (32位字符)" value="">
+            <input id="gist-file" placeholder="文件名 (xxx.yaml)" value="">
+            <input id="gist-token" type="password" placeholder="Token (ghp_...)" value="">
             <button class="btn-gist-sync">从 Gist 同步</button>
           </div>
           <div class="gist-section">
@@ -893,8 +892,16 @@
       startAutoCollect(false);
     };
 
-    document.getElementById("btn-settings").onclick = () =>
+    document.getElementById("btn-settings").onclick = () => {
+      // 每次打开设置时重新读取最新数据
+      const data = getStorageData();
+      modal.querySelector("#authors-input").value =
+        data.subscribedAuthorsText || "";
+      modal.querySelector("#gist-id").value = gistData.id;
+      modal.querySelector("#gist-file").value = gistData.file;
+      modal.querySelector("#gist-token").value = gistData.token;
       modal.classList.add("show");
+    };
 
     modal.querySelector(".btn-clear-record").onclick = () => {
       if (
@@ -914,7 +921,7 @@
     modal.querySelector(".btn-save").onclick = async () => {
       const text = document.getElementById("authors-input").value;
       const authors = parseAuthors(text);
-      const data = getStorageData();
+      const data = getStorageData(); // 重新读取最新数据
       data.subscribedAuthorsText = text; // 保存原始文本（包含注释）
       data.subscribedAuthors = authors; // 保存清洗后的作者列表
       data.updateTime = new Date().toISOString(); // 更新时间
@@ -933,7 +940,14 @@
       await syncGist();
     };
     modal.querySelector(".btn-gist-sync").onclick = async () => {
-      // 保存Gist配置
+      // 重新读取 Gist 配置
+      const rawGistCfg = GM_getValue(
+        GIST_KEY,
+        JSON.stringify(defaultGistSetting),
+      );
+      gistData = JSON.parse(rawGistCfg);
+
+      // 保存用户输入的 Gist 配置
       gistData.id = modal.querySelector("#gist-id").value || "";
       gistData.file = modal.querySelector("#gist-file").value || "";
       gistData.token = modal.querySelector("#gist-token").value || "";
@@ -946,7 +960,7 @@
 
       try {
         const gistConfig = await fetchGistContent();
-        const data = getStorageData();
+        const data = getStorageData(); // 重新读取最新数据
         data.subscribedAuthorsText = gistConfig.subscribedAuthorsText || "";
         data.subscribedAuthors = parseAuthors(data.subscribedAuthorsText);
         data.updateTime = gistConfig.updateTime || "";
@@ -974,6 +988,7 @@
     observe_and_run(
       ".bili-dyn-list__item",
       (item) => {
+        const data = getStorageData();
         const videoId = extractVideoId(item);
         if (videoId && data.addedIds.includes(videoId)) {
           item.classList.add("added-to-watch-later");
@@ -985,6 +1000,19 @@
       },
       false,
     );
+
+    // 监听 localStorage 变化（跨 tab 同步）
+    window.addEventListener("storage", (e) => {
+      if (e.key === STORAGE_KEY) {
+        console.log(`${N}检测到其他 tab 修改了数据，重新加载`);
+        // 如果设置弹窗是打开的，更新显示
+        if (modal.classList.contains("show")) {
+          const data = getStorageData();
+          modal.querySelector("#authors-input").value =
+            data.subscribedAuthorsText || "";
+        }
+      }
+    });
 
     // 初始化时同步Gist
     (async () => await syncGist())();
@@ -1000,16 +1028,10 @@
 
     // ------------------------------ 稍后播播放页 - START
     if (prop.name == "watchlater") {
-      // 自动开启连播
-      console.log(N, "✅ 稍后播页面，准备自动删除和连播");
+      console.log(N, "✅ 稍后播页面");
 
-      // 监听视频结束事件
-      observe_and_run(".bpx-player-video-wrap video", (videoObj) => {
-        videoObj.addEventListener("ended", () => {
-          console.debug(`${N}Video ended, deleting...`);
-          deleteFinishedVideo();
-        });
-      });
+      // 注意：稍后播的自动删除和连播功能已由 mongolian_player 脚本处理
+      // 如果未安装 mongolian_player，视频播完后不会自动删除
 
       // 添加快捷键监听（使用捕获阶段，优先于B站的处理）
       document.addEventListener("keydown", pressKeyDown, true); // capture: true
