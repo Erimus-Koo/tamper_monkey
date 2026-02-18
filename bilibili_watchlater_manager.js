@@ -39,8 +39,6 @@
 
 4. 快捷键
    - [S]: 手动删除当前视频
-   - [Shift + ←]: 播放上一个视频
-   - [Shift + →]: 播放下一个视频
 
 5. 自动开启连播
    - 进入稍后播页面自动开启连播
@@ -292,39 +290,12 @@
   };
   // -------------------------------------------------- 让对象可聚焦 - END
 
-  // -------------------------------------------------- 切换视频 - START
-  const switchVideo = (direction) => {
-    // direction: 1=下一个, -1=上一个
-    console.log(`${N}切换视频: ${direction === 1 ? "下一个" : "上一个"}`);
-
-    if (!document.URL.includes("list/watchlater")) {
-      console.debug(`${N}不在稍后播页面`);
-      return;
-    }
-
-    // 直接点击播放器的上一个/下一个按钮
-    const btnSelector =
-      direction === 1 ? ".bpx-player-ctrl-next" : ".bpx-player-ctrl-prev";
-    const btn = document.querySelector(btnSelector);
-
-    if (btn) {
-      btn.click();
-      console.log(`${N}✅ 已点击播放器按钮: ${btnSelector}`);
-    } else {
-      console.log(`${N}❌ 未找到播放器按钮: ${btnSelector}`);
-    }
-  };
-  // -------------------------------------------------- 切换视频 - END
-
   // -------------------------------------------------- shortcut - START
   let keyPressed = {}; //按下的所有键 目的是为了区分 1 和 ctrl+1 这种情况
 
   let keyActionsStopPropagation = {
     // 从稍后播删除当前播放的视频
     s: deleteFinishedVideo,
-    // 切换视频
-    "ArrowLeft,Shift": () => switchVideo(-1), // 上一个
-    "ArrowRight,Shift": () => switchVideo(1), // 下一个
   };
 
   const pressKeyDown = function (e) {

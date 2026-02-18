@@ -375,10 +375,12 @@ m: 静音
     if (keys in shortcutDict) {
       //字典里定义的直接搜索并点击的快捷键
       find_n_click(shortcutDict[keys]);
+      e.preventDefault(); // 阻止默认行为
       e.stopPropagation();
     } else if (keys in keyActionsStopPropagation) {
       //运行自定义函数的快捷键
       keyActionsStopPropagation[keys]();
+      e.preventDefault(); // 阻止默认行为
       e.stopPropagation();
     } else if (keys in keyActions) {
       //不需要阻止传递的快捷键
@@ -638,9 +640,9 @@ m: 静音
       observe_and_run(eleDict.playNext, addAutoPlayNextBtn);
       observe_and_run(eleDict.playPrev, addAutoPlayNextBtn);
 
-      // 添加快捷键监听
-      document.addEventListener("keydown", pressKeyDown);
-      document.addEventListener("keyup", pressKeyUp);
+      // 添加快捷键监听（使用捕获阶段，优先于B站的处理）
+      document.addEventListener("keydown", pressKeyDown, true); // capture: true
+      document.addEventListener("keyup", pressKeyUp, true); // capture: true
 
       // 定期执行，让播放速度统一为设定值
       // 连播目前检测不到 不会重新执行油猴
