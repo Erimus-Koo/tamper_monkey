@@ -237,41 +237,6 @@ m: 静音
   // -------------------------------------------------- 播放速度 - END
 
   // -------------------------------------------------- 音量控制 - START
-  const changeVideoVolume = function (v = 0) {
-    const LS_videoVolume = "mongolian_player_video_volume"; // 播放音量的存储名
-    const storedVolume = localStorage.getItem(LS_videoVolume);
-    console.log(
-      `${N}🔊 changeVideoVolume called: v=${v}, stored=${storedVolume}, current=${videoObj?.volume}`,
-    );
-
-    let volume = parseFloat(storedVolume) || 0.5; // 读取音量
-
-    if (v != 0) {
-      // 调整音量
-      volume = Math.min(Math.max(volume + v, 0), 1);
-      volume = Number(volume.toFixed(2));
-      console.log(
-        `${N}🔊 Adjusting volume: ${volume}, saving to localStorage with key: ${LS_videoVolume}`,
-      );
-      localStorage.setItem(LS_videoVolume, volume);
-
-      // 验证是否保存成功
-      const savedCheck = localStorage.getItem(LS_videoVolume);
-      console.log(`${N}🔊 Verify saved: ${savedCheck}`);
-
-      // 实际设置播放器音量
-      if (videoObj) {
-        videoObj.volume = volume;
-        console.log(`${N}🔊 Applied to player: ${videoObj.volume}`);
-      }
-    } else if (videoObj) {
-      // v == 0 时只是载入保存的音量
-      console.log(`${N}🔊 Loading saved volume: ${volume}`);
-      videoObj.volume = volume;
-    }
-  };
-  // -------------------------------------------------- 音量控制 - END
-
   // -------------------------------------------------- 让对象可聚焦 - START
   // 这个部分很多需要配合stylus修改display来实现，不然vimnium会找不到
   const makeElementFocusable = () => {
@@ -346,13 +311,7 @@ m: 静音
     keyActionsStopPropagation[i.toString()] = () =>
       (videoObj.currentTime = (videoObj.duration / 10) * i);
   }
-  // 以下是不需要阻止事件传播的按键
-  // 比如音量调整，阻止了会失去原本的提示浮窗
-  const keyActions = {
-    // 调整音量
-    ArrowUp: () => changeVideoVolume(0.1),
-    ArrowDown: () => changeVideoVolume(-0.1),
-  };
+
   const pressKeyDown = function (e) {
     console.debug(`${N}keyDown e:`, e);
     keyPressed[e.key] = true;
@@ -382,9 +341,6 @@ m: 静音
       keyActionsStopPropagation[keys]();
       e.preventDefault(); // 阻止默认行为
       e.stopPropagation();
-    } else if (keys in keyActions) {
-      //不需要阻止传递的快捷键
-      keyActions[keys]();
     }
   };
 
