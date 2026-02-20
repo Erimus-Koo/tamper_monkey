@@ -300,21 +300,36 @@
 
   const pressKeyDown = function (e) {
     console.debug(`${N}keyDown e:`, e);
+
+    // 获取真实的事件目标（包括 Shadow DOM 内部的元素）
+    const path = e.composedPath ? e.composedPath() : [e.target];
+
+    console.debug(`${N}event path:`, path);
+
+    // 检查事件路径中是否有可编辑元素
+    const isInEditableElement = path.some((element) => {
+      if (!element.tagName) return false; // 跳过非元素节点
+
+      return (
+        element.contentEditable === "true" ||
+        element.isContentEditable ||
+        element.tagName === "TEXTAREA" ||
+        (element.tagName === "INPUT" &&
+          ["text", "password", "url", "search", "tel", "email"].includes(
+            element.type,
+          ))
+      );
+    });
+
+    if (isInEditableElement) {
+      console.debug(`${N}在输入框内，忽略快捷键`);
+      return;
+    }
+
     keyPressed[e.key] = true;
     console.debug(`${N}keyDown keyPressed:`, keyPressed);
     const keys = Object.keys(keyPressed).sort().toString();
     console.debug(`${N}keyDown keys:`, keys); //如果多按键会变成"a,b"
-
-    // 如果光标在输入框里，快捷键不生效
-    if (
-      e.target.tagName === "TEXTAREA" ||
-      (e.target.tagName === "INPUT" &&
-        ["text", "password", "url", "search", "tel", "email"].includes(
-          e.target.type,
-        ))
-    ) {
-      return;
-    }
 
     // 设置快捷键
     if (keys in keyActionsStopPropagation) {

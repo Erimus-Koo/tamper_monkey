@@ -31,6 +31,9 @@ z: 播放恢复原速
 shift + right: 下一P
 shift + left:  上一P
 
+ctrl + right: 下一帧
+ctrl + left:  上一帧
+
 ====================
 其它功能
 
@@ -305,6 +308,21 @@ m: 静音
     // 跳P
     "ArrowLeft,Shift": () => find_n_click(eleDict.playPrev),
     "ArrowRight,Shift": () => find_n_click(eleDict.playNext),
+    // 逐帧播放
+    "ArrowLeft,Control": () => {
+      if (videoObj) {
+        videoObj.currentTime -= 0.03; // 上一帧
+        videoObj.pause();
+        notify("上一帧", ".bpx-player-video-wrap", 0, 0, 1);
+      }
+    },
+    "ArrowRight,Control": () => {
+      if (videoObj) {
+        videoObj.currentTime += 0.03; // 下一帧
+        videoObj.pause();
+        notify("下一帧", ".bpx-player-video-wrap", 0, 0, 1);
+      }
+    },
   };
   //进度条跳转
   for (let i of Array(10).keys()) {
@@ -314,21 +332,46 @@ m: 静音
 
   const pressKeyDown = function (e) {
     console.debug(`${N}keyDown e:`, e);
+
+    // 获取真实的事件目标（包括 Shadow DOM 内部的元素）
+    const path = e.composedPath ? e.composedPath() : [e.target];
+    const realTarget = path[0];
+
+    console.debug(
+      `${N}realTarget:`,
+      realTarget,
+      `tagName:`,
+      realTarget.tagName,
+      `contentEditable:`,
+      realTarget.contentEditable,
+      `isContentEditable:`,
+      realTarget.isContentEditable,
+    );
+
+    // 检查事件路径中是否有可编辑元素
+    const isInEditableElement = path.some((element) => {
+      if (!element.tagName) return false; // 跳过非元素节点
+
+      return (
+        element.contentEditable === "true" ||
+        element.isContentEditable ||
+        element.tagName === "TEXTAREA" ||
+        (element.tagName === "INPUT" &&
+          ["text", "password", "url", "search", "tel", "email"].includes(
+            element.type,
+          ))
+      );
+    });
+
+    if (isInEditableElement) {
+      console.debug(`${N}在输入框内，忽略快捷键`);
+      return;
+    }
+
     keyPressed[e.key] = true;
     console.debug(`${N}keyDown keyPressed:`, keyPressed);
     const keys = Object.keys(keyPressed).sort().toString();
     console.debug(`${N}keyDown keys:`, keys); //如果多按键会变成"a,b"
-
-    // 如果光标在输入框里，快捷键不生效
-    if (
-      e.target.tagName === "TEXTAREA" ||
-      (e.target.tagName === "INPUT" &&
-        ["text", "password", "url", "search", "tel", "email"].includes(
-          e.target.type,
-        ))
-    ) {
-      return;
-    }
 
     // 设置快捷键
     if (keys in shortcutDict) {
