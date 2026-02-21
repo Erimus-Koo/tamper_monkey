@@ -557,7 +557,7 @@
     }
 
     if (addedIds.includes(videoId)) {
-      console.log(`${N}跳过：已添加过 - ${videoTitle} (${videoId})`);
+      console.log(`${N}跳过：已在记录中 - ${videoTitle} (${videoId})`);
       item.classList.add("added-to-watch-later");
       return false;
     }
@@ -573,6 +573,13 @@
 
     const watchLaterBtn = item.querySelector(".bili-dyn-card-video__mark");
     if (watchLaterBtn) {
+      // 检查是否已经在稍后播列表中（通过按钮的active状态判断）
+      if (watchLaterBtn.classList.contains("active")) {
+        console.log(`${N}✅ 已手动添加过，仅标记 - ${videoTitle} (${videoId})`);
+        item.classList.add("added-to-watch-later");
+        return videoId; // 返回videoId以便记录，但不点击（避免取消稍后播）
+      }
+
       watchLaterBtn.click();
       item.classList.add("added-to-watch-later");
       console.log(
@@ -685,7 +692,7 @@
       data.lastStopId = firstId;
     }
     if (newAddedIds.length > 0) {
-      data.addedIds = [...newAddedIds, ...data.addedIds].slice(0, 100);
+      data.addedIds = [...newAddedIds, ...data.addedIds].slice(0, 1000);
     }
     saveStorageData(data);
 
@@ -907,9 +914,37 @@
     modal.querySelector(".btn-save").onclick = async () => {
       const text = document.getElementById("authors-input").value;
       const authors = parseAuthors(text);
+
+      // 检查是否有重复的作者名
+      const duplicates = authors.filter(
+        (name, index) => authors.indexOf(name) !== index,
+      );
+      const uniqueDuplicates = [...new Set(duplicates)];
+
+      if (uniqueDuplicates.length > 0) {
+        const duplicateList = uniqueDuplicates
+          .map((name) => `  • ${name}`)
+          .join("\n");
+        const confirmed = confirm(
+          `⚠️ 检测到重复的作者名：\n\n${duplicateList}\n\n` +
+            `是否继续保存？\n\n` +
+            `点击"确定"保存（重复项会被自动去重）\n` +
+            `点击"取消"返回修改`,
+        );
+
+        if (!confirmed) {
+          return; // 用户选择取消，不保存
+        }
+
+        console.log(`${N}⚠️ 发现重复作者: ${uniqueDuplicates.join(", ")}`);
+      }
+
+      // 去重后的作者列表
+      const uniqueAuthors = [...new Set(authors)];
+
       const data = getStorageData(); // 重新读取最新数据
       data.subscribedAuthorsText = text; // 保存原始文本（包含注释）
-      data.subscribedAuthors = authors; // 保存清洗后的作者列表
+      data.subscribedAuthors = uniqueAuthors; // 保存去重后的作者列表
       data.updateTime = new Date().toISOString(); // 更新时间
       saveStorageData(data);
 
@@ -920,7 +955,9 @@
       GM_setValue(GIST_KEY, JSON.stringify(gistData));
 
       modal.classList.remove("show");
-      console.log(`${N}✅ 已保存 ${authors.length} 个订阅作者`);
+      console.log(
+        `${N}✅ 已保存 ${uniqueAuthors.length} 个订阅作者 (原始: ${authors.length}, 去重: ${authors.length - uniqueAuthors.length})`,
+      );
 
       // 同步到Gist
       await syncGist();
