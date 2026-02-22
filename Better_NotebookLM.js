@@ -74,26 +74,33 @@ README
     }, duration);
   }
 
-  // 监控 h1、textarea 和 button 同时出现
+  // 监控对话框、textarea 和 button 同时出现
   const observer = new MutationObserver(() => {
-    const h1 = document.querySelector("h1#mat-mdc-dialog-title-0");
+    const dialogContainer = document.querySelector(
+      'div[class="mat-mdc-dialog-inner-container mdc-dialog__container"]',
+    );
     const textarea = document.querySelector(
-      '.custom-report-content textarea[placeholder*="For example:"]',
+      'textarea[aria-label="Input to describe the kind of report to create"]',
     );
     const primaryButton = document.querySelector('button[color="primary"]');
 
-    // 避免重复处理 - 检查是否已经添加过保存按钮
-    if (document.querySelector("[data-save-button-added]")) {
-      return;
-    }
-
     console.log("Observer triggered:", {
-      h1: !!h1,
+      dialogContainer: !!dialogContainer,
       textarea: !!textarea,
       primaryButton: !!primaryButton,
     });
 
-    if (h1 && textarea && primaryButton) {
+    if (dialogContainer && textarea && primaryButton) {
+      // 检查当前 primaryButton 的父元素中是否已经有保存按钮
+      const existingSaveBtn = primaryButton.parentElement.querySelector(
+        "[data-save-button-added]",
+      );
+
+      if (existingSaveBtn) {
+        console.log("Save button already exists, skipping");
+        return;
+      }
+
       console.log(
         "All elements found, adding save button and filling textarea",
       );
@@ -101,6 +108,7 @@ README
       // 创建保存按钮
       const saveBtn = document.createElement("button");
       saveBtn.textContent = "Save Prompt";
+      saveBtn.setAttribute("data-save-button-added", "true");
       saveBtn.style.cssText = `
         margin-right: 8px;
         font-size: 14px;
@@ -117,7 +125,6 @@ README
       `;
 
       saveBtn.onclick = () => {
-        // 获取当前 textarea 的内容
         const content = textarea.value;
         localStorage.setItem(STORAGE_KEY, content);
         console.log("Saved content:", content);
@@ -126,15 +133,11 @@ README
 
       // 将保存按钮插入到 primary button 的前一个兄弟元素位置
       primaryButton.parentElement.insertBefore(saveBtn, primaryButton);
-
-      // 标记已添加保存按钮，避免重复添加
-      saveBtn.setAttribute("data-save-button-added", "true");
       console.log("Save button added successfully", saveBtn);
 
       // 自动填充 textarea（如果有保存的内容）
       const savedText = localStorage.getItem(STORAGE_KEY) || "";
       console.log("Attempting to fill textarea with saved text:", savedText);
-      console.log("Current textarea value:", textarea.value);
 
       if (savedText && !textarea.value) {
         textarea.value = savedText;
