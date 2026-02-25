@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Copy Tweet to Markdown
 // @namespace    https://greasyfork.org/users/46393
-// @version      0.1.1
+// @version      0.1.2
 // @description  Copy the tweet in markdown format
 // @author       Erimus
 // @match        https://x.com/*
@@ -142,10 +142,10 @@
         "\n\n" +
         photos
           .map((photoUrl) => {
-            // 使用 HTML img 标签以支持设置尺寸
-            return `<img src="${photoUrl}" width="300" height="300">`;
+            // 使用 Markdown 图片格式，设置宽度为 200
+            return `![200](${photoUrl})`;
           })
-          .join("\n");
+          .join("");
     }
 
     // 拼接最终的 markdown 格式
