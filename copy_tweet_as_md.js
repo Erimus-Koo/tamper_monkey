@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Copy Tweet to Markdown
 // @namespace    https://greasyfork.org/users/46393
-// @version      0.1.2
+// @version      0.1.3
 // @description  Copy the tweet in markdown format
 // @author       Erimus
 // @match        https://x.com/*
@@ -211,37 +211,57 @@
   }
 
   /**
+   * 注入 CSS 样式
+   */
+  function injectStyles() {
+    if (document.getElementById("copy-tweet-md-styles")) return;
+
+    const style = document.createElement("style");
+    style.id = "copy-tweet-md-styles";
+    style.textContent = `
+      .copy-tweet-md-btn {
+        position: fixed;
+        bottom: 146px;
+        right: 20px;
+        width: 55px;
+        height: 55px;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 16px;
+        border: 1px solid rgb(75, 78, 82);
+        cursor: pointer;
+        box-shadow: rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px;
+        transition: all 0.2s ease;
+      }
+      
+      .copy-tweet-md-btn:hover {
+        border: 1px solid #fff8;
+      }
+
+      .copy-tweet-md-btn svg {
+        width: 32px;
+        height: 32px;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  /**
    * 创建复制按钮
    */
   function createCopyButton() {
     if (copyButton) return; // 避免重复创建
 
+    injectStyles();
+
     copyButton = document.createElement("button");
-    copyButton.innerHTML = "📋 Copy as MD";
-    copyButton.style.position = "fixed";
-    copyButton.style.bottom = "20px";
-    copyButton.style.right = "20px";
-    copyButton.style.zIndex = "9999";
-    copyButton.style.padding = "10px 16px";
-    copyButton.style.borderRadius = "20px";
-    copyButton.style.backgroundColor = "#1d9bf0";
-    copyButton.style.color = "white";
-    copyButton.style.border = "none";
-    copyButton.style.cursor = "pointer";
-    copyButton.style.fontSize = "14px";
-    copyButton.style.fontWeight = "bold";
-    copyButton.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)";
-    copyButton.style.transition = "all 0.2s ease";
-
-    copyButton.addEventListener("mouseenter", () => {
-      copyButton.style.backgroundColor = "#1a8cd8";
-      copyButton.style.transform = "scale(1.05)";
-    });
-
-    copyButton.addEventListener("mouseleave", () => {
-      copyButton.style.backgroundColor = "#1d9bf0";
-      copyButton.style.transform = "scale(1)";
-    });
+    copyButton.className = "copy-tweet-md-btn";
+    copyButton.title = "Copy Tweet as Markdown";
+    copyButton.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-scan-text-icon lucide-scan-text"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8h8"/><path d="M7 12h10"/><path d="M7 16h6"/></svg>
+    `;
 
     copyButton.addEventListener("click", () => {
       const markdown = parseTweetToMarkdown();
