@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Copy Tweet to Markdown
 // @namespace    https://greasyfork.org/users/46393
-// @version      0.1.3
+// @version      0.1.4
 // @description  Copy the tweet in markdown format
 // @author       Erimus
 // @match        https://x.com/*
@@ -233,7 +233,15 @@
         border: 1px solid rgb(75, 78, 82);
         cursor: pointer;
         box-shadow: rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px;
-        transition: all 0.2s ease;
+        overflow: hidden;
+        transform: scale(.5);
+        opacity: 0;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+      }
+
+      .copy-tweet-md-btn.visible {
+        transform: scale(1);
+        opacity: 1;
       }
       
       .copy-tweet-md-btn:hover {
@@ -277,13 +285,26 @@
   }
 
   /**
-   * 移除复制按钮
+   * 显示按钮
    */
-  function removeCopyButton() {
-    if (copyButton && copyButton.parentNode) {
-      copyButton.parentNode.removeChild(copyButton);
-      copyButton = null;
-      console.log(`${SN} 复制按钮已移除`);
+  function showCopyButton() {
+    if (!copyButton) {
+      createCopyButton();
+      // 延迟添加 visible 类以触发动画
+      setTimeout(() => {
+        if (copyButton) copyButton.classList.add("visible");
+      }, 10);
+    } else {
+      copyButton.classList.add("visible");
+    }
+  }
+
+  /**
+   * 隐藏按钮
+   */
+  function hideCopyButton() {
+    if (copyButton) {
+      copyButton.classList.remove("visible");
     }
   }
 
@@ -292,11 +313,9 @@
    */
   function updateButtonState() {
     if (isTweetDetailPage()) {
-      if (!copyButton) {
-        createCopyButton();
-      }
+      showCopyButton();
     } else {
-      removeCopyButton();
+      hideCopyButton();
     }
   }
 
