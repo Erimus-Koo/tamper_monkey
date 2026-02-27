@@ -1,6 +1,6 @@
 ﻿// ==UserScript==
 // @name         B站稍后播管理器
-// @version      0.1.0
+// @version      0.1.1
 // @description  稍后播增强：自动删除已播放、列表自动刷新、按钮可聚焦（配合Vim使用）
 // @author       Erimus
 // @namespace    https://greasyfork.org/users/46393
@@ -759,6 +759,8 @@
       .added-to-watch-later .bili-dyn-card-video__stat:after{
         content:'已加入稍后再看';color:#F69;
       }
+      /* 稍后看视频列表 保持删除按钮可见 */
+      #playlist-video-action-list .del-btn{display:block!important}
       #auto-collect-controls{position:fixed;left:8px;top:74px;z-index:9999;display:flex;flex-direction:column;gap:8px}
       .auto-collect-btn{display:flex;align-items:center;gap:6px;padding:8px 12px;background:#00a1d6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.15);transition:all .3s}
       .auto-collect-btn:hover{background:#00b5e5;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.2)}
