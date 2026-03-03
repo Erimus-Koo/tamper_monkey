@@ -374,7 +374,7 @@
     if (!raw) {
       return {
         subscribedAuthorsText: "", // 原始文本，包含注释
-        subscribedAuthors: [], // 清洗后的作者列表
+        subscribedAuthors: [], // 清洗后的作者列表 [{author, conditions}]
         lastStopId: "",
         addedIds: [],
         updateTime: "", // 用于Gist同步
@@ -390,12 +390,41 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   };
 
-  // 解析作者列表（从文本中提取纯作者名）
+  // 解析作者列表（从文本中提取作者名和条件）
   const parseAuthors = (text) => {
-    return text
+    const result = text
       .split("\n")
-      .map((line) => line.split("//")[0].trim()) // 去掉行内注释
-      .filter((line) => line && !line.includes("-----"));
+      .map((line) => {
+        const content = line.split("//")[0].trim(); // 去掉行内注释
+        if (!content || content.includes("-----")) return null;
+
+        // 检查是否有条件 {title:xxx,time:<600}
+        const match = content.match(/^([^\{]+)\s*\{([^\}]+)\}$/);
+        if (match) {
+          const author = match[1].trim();
+          const condStr = match[2].trim();
+          const conditions = {};
+
+          // 解析条件
+          condStr.split(",").forEach((cond) => {
+            const [key, value] = cond.split(":").map((s) => s.trim());
+            if (key && value) {
+              conditions[key] = value;
+            }
+          });
+
+          console.log(`${N}📋 解析作者条件: ${author}`, conditions);
+          return { author, conditions };
+        }
+
+        // 没有条件，只有作者名
+        console.log(`${N}📋 解析作者: ${content} (无条件)`);
+        return { author: content, conditions: null };
+      })
+      .filter((item) => item !== null);
+
+    console.log(`${N}📋 解析完成，共 ${result.length} 个作者:`, result);
+    return result;
   };
 
   // Gist 同步功能
@@ -527,6 +556,60 @@
     return titleEle ? titleEle.textContent.trim() : "";
   };
 
+  // 提取视频时长（秒）
+  const extractVideoDuration = (item) => {
+    const durationEle = item.querySelector(".duration-time");
+    if (!durationEle) return null;
+
+    const timeStr = durationEle.textContent.trim(); // 格式: "03:36" 或 "1:23:45"
+    const parts = timeStr.split(":").map((p) => parseInt(p, 10));
+
+    let seconds = null;
+    if (parts.length === 2) {
+      // mm:ss
+      seconds = parts[0] * 60 + parts[1];
+    } else if (parts.length === 3) {
+      // hh:mm:ss
+      seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
+
+    console.log(`${N}⏱️ 视频时长: ${timeStr} = ${seconds}s`);
+    return seconds;
+  };
+
+  // 检查时间条件
+  const checkTimeCondition = (duration, condition) => {
+    if (!condition || duration === null) return true;
+
+    console.log(`${N}⏱️ 检查时间条件: ${duration}s vs ${condition}`);
+
+    // <600
+    if (condition.startsWith("<")) {
+      const limit = parseInt(condition.slice(1), 10);
+      const result = duration < limit;
+      console.log(`${N}⏱️ ${duration} < ${limit} = ${result}`);
+      return result;
+    }
+    // >300
+    if (condition.startsWith(">")) {
+      const limit = parseInt(condition.slice(1), 10);
+      const result = duration > limit;
+      console.log(`${N}⏱️ ${duration} > ${limit} = ${result}`);
+      return result;
+    }
+    // 300-600
+    if (condition.includes("-")) {
+      const [min, max] = condition
+        .split("-")
+        .map((s) => parseInt(s.trim(), 10));
+      const result = duration >= min && duration <= max;
+      console.log(`${N}⏱️ ${min} <= ${duration} <= ${max} = ${result}`);
+      return result;
+    }
+
+    return true;
+  };
+
   // 检查是否应该跳过
   const shouldSkip = (item) => {
     const authorEle = item.querySelector(".bili-dyn-title__text");
@@ -550,6 +633,7 @@
 
     const videoId = extractVideoId(item);
     const videoTitle = extractVideoTitle(item);
+    const videoDuration = extractVideoDuration(item);
 
     if (!videoId) {
       console.log(`${N}跳过：无法提取视频ID`);
@@ -565,11 +649,36 @@
     const authorEle = item.querySelector(".bili-dyn-title__text");
     const author = authorEle.textContent.trim();
 
-    if (!subscribedAuthors.includes(author)) {
+    // 查找匹配的作者配置
+    const authorConfig = subscribedAuthors.find((cfg) => cfg.author === author);
+    if (!authorConfig) {
       return false;
     }
 
-    console.log(`${N}✅ 匹配作者: ${author}, 视频: ${videoTitle} (${videoId})`);
+    // 检查条件
+    if (authorConfig.conditions) {
+      const { title: titleCond, time: timeCond } = authorConfig.conditions;
+
+      // 检查标题条件
+      if (titleCond && !videoTitle.includes(titleCond)) {
+        console.log(
+          `${N}跳过：标题不匹配 "${titleCond}" - ${author}: ${videoTitle}`,
+        );
+        return false;
+      }
+
+      // 检查时长条件
+      if (timeCond && !checkTimeCondition(videoDuration, timeCond)) {
+        console.log(
+          `${N}跳过：时长不匹配 "${timeCond}" (实际: ${videoDuration}s) - ${author}: ${videoTitle}`,
+        );
+        return false;
+      }
+    }
+
+    console.log(
+      `${N}✅ 匹配作者: ${author}, 视频: ${videoTitle} (${videoId}, ${videoDuration}s)`,
+    );
 
     const watchLaterBtn = item.querySelector(".bili-dyn-card-video__mark");
     if (watchLaterBtn) {
@@ -616,7 +725,7 @@
     }
 
     console.log(
-      `${N}🚀 开始自动收藏，订阅作者: ${subscribedAuthors.join(", ")}`,
+      `${N}🚀 开始自动收藏，订阅作者: ${subscribedAuthors.map((cfg) => cfg.author).join(", ")}`,
     );
 
     const stopId = fromStart ? "" : data.lastStopId;
