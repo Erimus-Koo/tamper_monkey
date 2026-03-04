@@ -392,38 +392,59 @@
 
   // 解析作者列表（从文本中提取作者名和条件）
   const parseAuthors = (text) => {
-    const result = text
-      .split("\n")
-      .map((line) => {
-        const content = line.split("//")[0].trim(); // 去掉行内注释
-        if (!content || content.includes("-----")) return null;
+    const userDict = {};
 
-        // 检查是否有条件 {title:xxx,time:<600}
-        const match = content.match(/^([^\{]+)\s*\{([^\}]+)\}$/);
-        if (match) {
-          const author = match[1].trim();
-          const condStr = match[2].trim();
-          const conditions = {};
+    for (let line of text.split("\n")) {
+      // 跳过空行和纯注释行
+      if (!line.trim() || line.trim().startsWith("//")) continue;
 
-          // 解析条件
-          condStr.split(",").forEach((cond) => {
-            const [key, value] = cond.split(":").map((s) => s.trim());
-            if (key && value) {
-              conditions[key] = value;
-            }
-          });
+      // 去掉行尾注释
+      if (line.includes("//")) {
+        line = line.split("//")[0].trim();
+      }
 
-          console.log(`${N}📋 解析作者条件: ${author}`, conditions);
-          return { author, conditions };
+      // 跳过分隔线
+      if (line.includes("-----")) continue;
+
+      // 检查是否有条件 {title:xxx,time:<600}
+      const condMatch = line.match(/\{([^\}]+)\}/);
+
+      if (condMatch) {
+        // 有条件
+        const name = line.replace(/\{[^\}]+\}/, "").trim();
+        const condStr = condMatch[1].trim();
+        const conditions = {};
+
+        // 解析条件
+        condStr.split(",").forEach((cond) => {
+          const [key, value] = cond.split(":").map((s) => s.trim());
+          if (key && value) {
+            conditions[key] = value;
+          }
+        });
+
+        userDict[name] = conditions;
+        console.log(`${N}📋 解析作者: "${name}" | 条件:`, conditions);
+      } else {
+        // 无条件
+        const name = line.trim();
+        if (name) {
+          userDict[name] = null;
+          console.log(`${N}📋 解析作者: "${name}" | 无条件`);
         }
+      }
+    }
 
-        // 没有条件，只有作者名
-        console.log(`${N}📋 解析作者: ${content} (无条件)`);
-        return { author: content, conditions: null };
-      })
-      .filter((item) => item !== null);
+    // 转换为数组格式 [{author, conditions}, ...]
+    const result = Object.entries(userDict).map(([author, conditions]) => ({
+      author,
+      conditions,
+    }));
 
-    console.log(`${N}📋 解析完成，共 ${result.length} 个作者:`, result);
+    console.log(
+      `${N}📋 解析完成，共 ${result.length} 个作者:`,
+      result.map((cfg) => cfg.author).join(", "),
+    );
     return result;
   };
 
@@ -652,17 +673,23 @@
     // 查找匹配的作者配置
     const authorConfig = subscribedAuthors.find((cfg) => cfg.author === author);
     if (!authorConfig) {
+      console.log(`${N}⏭️ 跳过：作者 "${author}" 不在订阅列表中`);
       return false;
     }
+
+    console.log(
+      `${N}🎯 发现订阅作者: "${author}" | 视频: ${videoTitle} (${videoDuration}s)`,
+    );
 
     // 检查条件
     if (authorConfig.conditions) {
       const { title: titleCond, time: timeCond } = authorConfig.conditions;
+      console.log(`${N}   检查条件:`, authorConfig.conditions);
 
       // 检查标题条件
       if (titleCond && !videoTitle.includes(titleCond)) {
         console.log(
-          `${N}跳过：标题不匹配 "${titleCond}" - ${author}: ${videoTitle}`,
+          `${N}   ❌ 标题不匹配: 需要包含 "${titleCond}", 实际标题 "${videoTitle}"`,
         );
         return false;
       }
@@ -670,15 +697,15 @@
       // 检查时长条件
       if (timeCond && !checkTimeCondition(videoDuration, timeCond)) {
         console.log(
-          `${N}跳过：时长不匹配 "${timeCond}" (实际: ${videoDuration}s) - ${author}: ${videoTitle}`,
+          `${N}   ❌ 时长不匹配: 需要 ${timeCond}, 实际 ${videoDuration}s`,
         );
         return false;
       }
-    }
 
-    console.log(
-      `${N}✅ 匹配作者: ${author}, 视频: ${videoTitle} (${videoId}, ${videoDuration}s)`,
-    );
+      console.log(`${N}   ✅ 所有条件匹配`);
+    } else {
+      console.log(`${N}   ✅ 无条件限制，直接匹配`);
+    }
 
     const watchLaterBtn = item.querySelector(".bili-dyn-card-video__mark");
     if (watchLaterBtn) {
@@ -692,7 +719,7 @@
       watchLaterBtn.click();
       item.classList.add("added-to-watch-later");
       console.log(
-        `${N}✅ 已添加到稍后播: ${author} - ${videoTitle} (${videoId})`,
+        `${N}✅ 已添加到稍后播: "${author}" - ${videoTitle} (${videoId})`,
       );
       return videoId;
     }
@@ -715,7 +742,19 @@
     updateButtonState();
 
     const data = getStorageData();
-    const subscribedAuthors = data.subscribedAuthors;
+
+    // 确保 subscribedAuthors 是正确格式，如果不是则重新解析
+    let subscribedAuthors = data.subscribedAuthors;
+    if (
+      !subscribedAuthors ||
+      subscribedAuthors.length === 0 ||
+      typeof subscribedAuthors[0] === "string"
+    ) {
+      console.log(`${N}检测到旧格式数据，重新解析...`);
+      subscribedAuthors = parseAuthors(data.subscribedAuthorsText || "");
+      data.subscribedAuthors = subscribedAuthors;
+      saveStorageData(data);
+    }
 
     if (subscribedAuthors.length === 0) {
       alert("请先设置订阅作者！");
@@ -894,6 +933,8 @@
       .auto-collect-dialog .gist-section input{width:100%;padding:8px 12px;margin-bottom:8px;border:1px solid #ddd;border-radius:6px;font-size:14px}
       .auto-collect-dialog .btn-gist-sync{width:100%;padding:10px;background:#28a745;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;margin-top:4px}
       .auto-collect-dialog .btn-gist-sync:hover{background:#218838}
+      .auto-collect-dialog .btn-set-lastid{width:100%;padding:10px;background:#00a1d6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;margin-top:4px}
+      .auto-collect-dialog .btn-set-lastid:hover{background:#00b5e5}
       .auto-collect-dialog .btn-clear-record{width:100%;padding:10px;background:#ff6b6b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;margin-top:12px}
       .auto-collect-dialog .btn-clear-record:hover{background:#ff5252}
       .last-stop-position:after{
@@ -943,7 +984,13 @@
             <button class="btn-gist-sync">从 Gist 同步</button>
           </div>
           <div class="gist-section">
-            <h4>🗑️ 清除记录</h4>
+            <h4>� 设置停止位置</h4>
+            <input id="last-stop-id" placeholder="输入视频ID (如: BV1xx...)" value="">
+            <button class="btn-set-lastid">设置停止位置</button>
+            <div class="hint">设置后下次运行将扫描到此视频为止</div>
+          </div>
+          <div class="gist-section">
+            <h4>�🗑️ 清除记录</h4>
             <button class="btn-clear-record">清除上次停止位置</button>
             <div class="hint">清除后下次运行将从头扫描100条</div>
           </div>
@@ -1004,7 +1051,28 @@
       modal.querySelector("#gist-id").value = gistData.id;
       modal.querySelector("#gist-file").value = gistData.file;
       modal.querySelector("#gist-token").value = gistData.token;
+      modal.querySelector("#last-stop-id").value = data.lastStopId || "";
       modal.classList.add("show");
+    };
+
+    modal.querySelector(".btn-set-lastid").onclick = () => {
+      const inputId = modal.querySelector("#last-stop-id").value.trim();
+      if (!inputId) {
+        alert("请输入视频ID！");
+        return;
+      }
+
+      // 验证ID格式（BV开头）
+      if (!inputId.startsWith("BV")) {
+        alert("视频ID格式错误！应该是 BV 开头的字符串");
+        return;
+      }
+
+      const data = getStorageData();
+      data.lastStopId = inputId;
+      saveStorageData(data);
+      console.log(`${N}✅ 已设置停止位置: ${inputId}`);
+      alert(`已设置停止位置: ${inputId}`);
     };
 
     modal.querySelector(".btn-clear-record").onclick = () => {
