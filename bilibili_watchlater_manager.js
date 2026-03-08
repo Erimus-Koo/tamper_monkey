@@ -818,12 +818,13 @@
         break;
       }
 
-      // 如果已经添加过，标记但继续扫描（不停止）
+      // 如果已经添加过，停止扫描
       if (videoId && data.addedIds.includes(videoId)) {
-        console.log(`${N}跳过已添加: ${videoTitle} (${videoId})`);
+        console.log(
+          `${N}⏹ 遇到已添加视频，停止扫描: ${videoTitle} (${videoId})`,
+        );
         item.classList.add("added-to-watch-later");
-        processedItemCount++;
-        continue;
+        break;
       }
 
       const result = await processItem(item, subscribedAuthors, data.addedIds);
