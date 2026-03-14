@@ -122,7 +122,8 @@ m: 静音
       const style = document.createElement("style");
       style.textContent = `.${notificationElement.className}{
       position:absolute;z-index:999999;
-      font-size:1rem;color:#fff;background:#000c;
+      font-size:1rem;color:#fff;background:#0009;
+      backdrop-filter:blur(1em);
       padding:.5em 1em;border-radius:.5em;
     }`;
       style.setAttribute("data-target", originSelector);
@@ -207,7 +208,7 @@ m: 静音
     if (videoObj) {
       if (videoObj.playbackRate === speed) return;
       videoObj.playbackRate = speed;
-      const content = `播放速度: ${speed}<br><span style="color:#f90;font-size:.9em;font-family:'JetBrains Mono',Consolas,Menlo,sans-serif">C:加速 V:减速 Z:还原</span>`;
+      const content = `播放速度: ${speed}<br><span style="color:#f90;font-size:.9em;font-family:'JetBrains Mono',Consolas,Menlo,sans-serif;white-space:nowrap">C:加速 V:减速 Z:还原</span>`;
       notify(content, ".bpx-player-ctrl-playbackrate", 0, -100);
     }
   };
