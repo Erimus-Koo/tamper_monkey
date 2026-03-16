@@ -768,7 +768,7 @@
     );
 
     const stopId = fromStart ? "" : data.lastStopId;
-    const maxItems = fromStart ? 100 : stopId ? 300 : 100;
+    const maxItems = fromStart ? 100 : stopId ? 500 : 100;
 
     if (stopId) {
       console.log(`${N}上次停止位置ID: ${stopId}`);
