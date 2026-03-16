@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Copy Tweet to Markdown
 // @namespace    https://greasyfork.org/users/46393
-// @version      0.1.4
+// @version      0.1.5
 // @description  Copy the tweet in markdown format
 // @author       Erimus
 // @match        https://x.com/*
@@ -79,6 +79,162 @@
     });
 
     return photos;
+  }
+
+  /**
+   * 将 Twitter Article 内容转换为 Markdown 格式
+   * 选择器: div[data-testid="twitterArticleReadView"]
+   */
+  function parseArticleTweetToMarkdown() {
+    // 正文编辑器容器
+    const richTextView = document.querySelector(
+      '[data-testid="twitterArticleRichTextView"]',
+    );
+    if (!richTextView) return null;
+
+    // data-contents="true" 的直接子节点是各块的 wrapper DIV
+    const editorContent = richTextView.querySelector("[data-contents='true']");
+    if (!editorContent) return null;
+
+    const url = getTweetUrl();
+
+    // 文章大标题在 editor 外面
+    const titleEl = document.querySelector(
+      '[data-testid="twitter-article-title"]',
+    );
+
+    // 计算正文标题的偏移量：找最小 heading 级别，让它对齐到 h3
+    // h1 最小 → offset=2；h2 最小 → offset=1；h3+ → offset=0
+    const bodyHeadings = editorContent.querySelectorAll("h1,h2,h3,h4,h5,h6");
+    const minBodyLevel = bodyHeadings.length
+      ? Math.min(
+          ...Array.from(bodyHeadings).map((el) => parseInt(el.tagName[1])),
+        )
+      : 3;
+    const headingOffset = Math.max(0, 3 - minBodyLevel); // h1→2, h2→1, h3+→0
+
+    function shiftHeaderLevel(level) {
+      return Math.min(level + headingOffset, 6);
+    }
+
+    /**
+     * 提取 inline 富文本，递归处理子节点
+     * 文本内容藏在 span[data-text="true"] 里，递归能自然拿到
+     */
+    function processInlineNode(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.textContent.replace(/</g, "\\<").replace(/>/g, "\\>");
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) return "";
+
+      const tag = node.tagName.toLowerCase();
+
+      if (tag === "img") {
+        const src = node.src || node.getAttribute("src") || "";
+        const alt = node.alt || "";
+        if (src.includes("twimg.com/emoji")) return alt;
+        return `![${alt}](${src})`;
+      }
+      if (tag === "a") {
+        const href = node.href || node.getAttribute("href") || "";
+        const inner = Array.from(node.childNodes)
+          .map(processInlineNode)
+          .join("");
+        return `[${inner}](${href})`;
+      }
+      if (tag === "br") return "\n";
+      if (tag === "strong" || tag === "b") {
+        return `**${Array.from(node.childNodes).map(processInlineNode).join("")}**`;
+      }
+      if (tag === "em" || tag === "i") {
+        return `*${Array.from(node.childNodes).map(processInlineNode).join("")}*`;
+      }
+      if (tag === "code") return "`" + node.textContent + "`";
+
+      // span / div / 其他：递归子节点
+      return Array.from(node.childNodes).map(processInlineNode).join("");
+    }
+
+    function preToCodeBlock(pre) {
+      const codeEl = pre.querySelector("code");
+      const lang =
+        (codeEl && (codeEl.className.match(/language-(\S+)/) || [])[1]) || "";
+      const code = (codeEl || pre).textContent;
+      return "```" + lang + "\n" + code + "\n```";
+    }
+
+    /**
+     * 处理一个真正的块元素（h1/div.longform-unstyled/section 等）
+     * wrapper DIV 的 firstElementChild 才是真正的块
+     */
+    function processBlock(block) {
+      if (!block || block.nodeType !== Node.ELEMENT_NODE) return "";
+      const tag = block.tagName.toLowerCase();
+
+      // 标题：h1.longform-header-one / h2.longform-header-two 等
+      if (/^h[1-6]$/.test(tag)) {
+        const level = shiftHeaderLevel(parseInt(tag[1]));
+        return "#".repeat(level) + " " + processInlineNode(block).trim();
+      }
+
+      // section：图片块或代码块
+      if (tag === "section") {
+        const pre = block.querySelector("pre");
+        if (pre) return preToCodeBlock(pre);
+
+        // 图片块：直接取 img src，不走 a 链接包装
+        const photoImg = block.querySelector('[data-testid="tweetPhoto"] img');
+        if (photoImg) {
+          const src = photoImg.src || photoImg.getAttribute("src") || "";
+          return `![200](${src})`;
+        }
+
+        const img = block.querySelector("img");
+        if (img) {
+          const src = img.src || img.getAttribute("src") || "";
+          return `![200](${src})`;
+        }
+
+        return "";
+      }
+
+      // pre 直接出现
+      if (tag === "pre") return preToCodeBlock(block);
+
+      // ul / ol
+      if (tag === "ul" || tag === "ol") {
+        return Array.from(block.children)
+          .map((li) => "- " + processInlineNode(li).trim())
+          .join("\n");
+      }
+
+      // div.longform-unstyled 等普通段落
+      return processInlineNode(block).trim();
+    }
+
+    // editorContent 的每个直接子节点：
+    // - DIV wrapper → firstElementChild 是真正的块（h1 / div.longform-unstyled）
+    // - SECTION wrapper → 它自己就是块，直接处理
+    const parts = [];
+    Array.from(editorContent.children).forEach((wrapper) => {
+      let block;
+      if (wrapper.tagName === "SECTION") {
+        block = wrapper; // section 本身就是块
+      } else {
+        block = wrapper.firstElementChild || wrapper;
+      }
+      const md = processBlock(block);
+      if (md) parts.push(md);
+    });
+
+    const bodyMarkdown = parts.join("\n\n");
+
+    const titleText = titleEl ? processInlineNode(titleEl).trim() : "";
+    const titleLine = titleText ? `## ${titleText}\n\n` : "";
+
+    const result = `${url}\n\n${titleLine}${bodyMarkdown}`;
+    console.log(`${SN} [Article] 解析结果:`, result);
+    return result;
   }
 
   /**
@@ -272,7 +428,8 @@
     `;
 
     copyButton.addEventListener("click", () => {
-      const markdown = parseTweetToMarkdown();
+      // 优先尝试 Twitter Article 格式，否则回退到普通推文
+      const markdown = parseArticleTweetToMarkdown() || parseTweetToMarkdown();
       if (markdown) {
         copyToClipboard(markdown);
       } else {
