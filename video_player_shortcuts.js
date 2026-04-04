@@ -44,6 +44,7 @@ z: 播放恢复原速
 
   // 信息提示窗
   let notifyDelay;
+  let notifyDebugMode = false; // Shift+C/V/Z 时永久显示notify
   function notify(
     content, //innerHTML
     originEle, //定位对象 消息出现的位置 一般是视频对象
@@ -55,7 +56,13 @@ z: 播放恢复原速
 
     // 检查已有的通知容器
     const notiName = "media-player-shortcut";
-    let notificationElement = originEle.querySelector(
+    // 如果是video或audio就加到父级 否则加到指定originEle
+    const container =
+      originEle.tagName.toLowerCase() === "video" ||
+      originEle.tagName.toLowerCase() === "audio"
+        ? originEle.parentElement
+        : originEle;
+    let notificationElement = container.querySelector(
       `.notification[data-target="${notiName}"]`,
     );
     if (notificationElement) {
@@ -66,12 +73,6 @@ z: 播放恢复原速
       notificationElement = document.createElement("div");
       notificationElement.className = "notification";
       notificationElement.setAttribute("data-target", notiName);
-      // 如果是video或audio就加到父级 否则加到指定originEle
-      const container =
-        originEle.tagName.toLowerCase() === "video" ||
-        originEle.tagName.toLowerCase() === "audio"
-          ? originEle.parentElement
-          : originEle;
       container.appendChild(notificationElement);
     }
 
@@ -133,9 +134,11 @@ z: 播放恢复原速
     }
 
     // 设置浮窗的淡出效果
+    const actualDelay = notifyDebugMode ? 999999 : delay;
     notifyDelay = setTimeout(() => {
       notificationElement.remove();
-    }, delay * 1000); // 3秒后触发淡出效果
+      notifyDebugMode = false;
+    }, actualDelay * 1000);
   }
   // -------------------------------------------------- common - END
 
@@ -146,7 +149,7 @@ z: 播放恢复原速
     if (!videoObj) return;
     if (videoObj.playbackRate === speed) return;
     videoObj.playbackRate = speed;
-    const content = `播放速度: ${speed}<br><span style="color:#f90;font-size:.9em;font-family:'JetBrains Mono',Consolas,Menlo,sans-serif">C:加速 V:减速 Z:还原</span>`;
+    const content = `播放速度: ${speed}<br><span style="color:#f90;font-size:.9em;font-family:'JetBrains Mono',Consolas,Menlo,sans-serif;white-space:nowrap">C:加速 V:减速 Z:还原</span>`;
     if (videoObj instanceof HTMLVideoElement) {
       // video: 在较小的视频 如GIF 表情包等场景下 不提示
       if (videoObj.offsetWidth > 200 && videoObj.offsetHeight > 200) {
@@ -254,6 +257,19 @@ z: 播放恢复原速
     c: () => changePlaySpeed(0.1), //加速
     v: () => changePlaySpeed(-0.1), //减速
     z: () => changePlaySpeed(99), //toggle 默认速度
+    // 调试用：Shift+C/V/Z 永久显示notify（方便排查位置问题）
+    C: () => {
+      notifyDebugMode = true;
+      changePlaySpeed(0.1);
+    },
+    V: () => {
+      notifyDebugMode = true;
+      changePlaySpeed(-0.1);
+    },
+    Z: () => {
+      notifyDebugMode = true;
+      changePlaySpeed(99);
+    },
     // 新增：Alt/Ctrl + < 和 > 调速
     "Alt,<": () => changePlaySpeed(-0.1), //减速
     "Alt,>": () => changePlaySpeed(0.1), //加速
