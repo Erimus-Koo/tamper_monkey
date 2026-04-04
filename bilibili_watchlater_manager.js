@@ -911,8 +911,8 @@
     const style = document.createElement("style");
     style.textContent = `
       .bili-dyn-list__item{position:relative}
-      .added-to-watch-later{opacity:.35;transition:opacity .3s}
-      .added-to-watch-later:hover{opacity:1}
+      .added-to-watch-later .bili-dyn-item__main{opacity:.35;}
+      .added-to-watch-later .bili-dyn-item__main:hover{opacity:1}
       .added-to-watch-later .bili-dyn-card-video__stat:after{
         content:'已加入稍后再看';color:#F69;
       }
