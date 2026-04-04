@@ -911,7 +911,7 @@
     const style = document.createElement("style");
     style.textContent = `
       .bili-dyn-list__item{position:relative}
-      .added-to-watch-later{opacity:.5;transition:opacity .3s}
+      .added-to-watch-later{opacity:.35;transition:opacity .3s}
       .added-to-watch-later:hover{opacity:1}
       .added-to-watch-later .bili-dyn-card-video__stat:after{
         content:'已加入稍后再看';color:#F69;
@@ -947,9 +947,9 @@
       .auto-collect-dialog .btn-clear-record{width:100%;padding:10px;background:#ff6b6b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;margin-top:12px}
       .auto-collect-dialog .btn-clear-record:hover{background:#ff5252}
       .last-stop-position:after{
-        content:'上次看到这里';position:absolute;top:0;left:50%;transform:translateX(-50%);background:#000;color:#FFF;padding:.125em .5em;border-radius:0 0 .5em .5em;
+        content:'上次看到这里';position:absolute;top:0;left:50%;transform:translateX(-50%);background:#F33;color:#FFF;padding:.125em .5em;border-radius:0 0 .5em .5em;
       }
-      .last-stop-position .bili-dyn-item{outline:2px solid #000}
+      .last-stop-position .bili-dyn-item{outline:2px solid #F33}
       .auto-collect-dialog .buttons{display:flex;gap:12px;margin-top:16px}
       .auto-collect-dialog button{flex:1;padding:10px;border:none;border-radius:6px;cursor:pointer;font-size:14px}
       .auto-collect-dialog .btn-save{background:#00a1d6;color:#fff}
