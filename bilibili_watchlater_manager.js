@@ -1,6 +1,6 @@
 ﻿// ==UserScript==
 // @name         B站稍后播管理器
-// @version      0.1.1
+// @version      0.1.2
 // @description  稍后播增强：自动删除已播放、列表自动刷新、按钮可聚焦（配合Vim使用）
 // @author       Erimus
 // @namespace    https://greasyfork.org/users/46393
@@ -212,6 +212,110 @@
     if (getPageProperty().name == "watchlater-list") {
       console.log(`${N}检测到稍后播列表页，启动自动刷新/播放逻辑`);
 
+      // 注入开关样式
+      const style = document.createElement("style");
+      style.textContent = `
+        #wl-auto-toggle,#wl-sort-btn{position:fixed;right:16px;z-index:9999;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);padding:8px 12px;border-radius:8px;color:#fff;font-size:13px;cursor:pointer;user-select:none;}
+        #wl-auto-toggle{top:74px;}
+        #wl-sort-btn{top:118px;}
+        #wl-auto-toggle .wl-switch{width:36px;height:20px;border-radius:10px;background:#555;position:relative;transition:background .2s;flex-shrink:0;}
+        #wl-auto-toggle .wl-switch:after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left .2s;}
+        #wl-auto-toggle.on .wl-switch{background:#00a1d6;}
+        #wl-auto-toggle.on .wl-switch:after{left:19px;}
+      `;
+      document.head.appendChild(style);
+
+      // 注入开关 UI
+      const AUTO_KEY = "wl_auto_refresh_enabled";
+      let enabled = GM_getValue(AUTO_KEY, true);
+
+      const toggle = document.createElement("div");
+      toggle.id = "wl-auto-toggle";
+      const render = () => {
+        toggle.className = enabled ? "on" : "";
+        toggle.innerHTML = `<div class="wl-switch"></div><span>自动刷新/跳转</span>`;
+      };
+      render();
+      document.body.appendChild(toggle);
+
+      // 排序按钮
+      const sortBtn = document.createElement("div");
+      sortBtn.id = "wl-sort-btn";
+      sortBtn.innerHTML = `<span>⏱ 按剩余时间排序</span>`;
+      document.body.appendChild(sortBtn);
+
+      toggle.onclick = () => {
+        enabled = !enabled;
+        GM_setValue(AUTO_KEY, enabled);
+        render();
+        console.log(`${N}🎛️ 自动刷新/跳转: ${enabled ? "开启" : "关闭"}`);
+      };
+
+      // 解析时间字符串为秒数，格式 "MM:SS" 或 "HH:MM:SS"
+      const parseSeconds = (str) => {
+        const parts = str.trim().split(":").map(Number);
+        if (parts.length === 2) return parts[0] * 60 + parts[1];
+        if (parts.length === 3)
+          return parts[0] * 3600 + parts[1] * 60 + parts[2];
+        return 0;
+      };
+
+      // 秒数转 "MM:SS" 或 "HH:MM:SS"
+      const formatSeconds = (s) => {
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        const pad = (n) => String(n).padStart(2, "0");
+        return h > 0
+          ? `${pad(h)}:${pad(m)}:${pad(sec)}`
+          : `${pad(m)}:${pad(sec)}`;
+      };
+
+      // 计算单个 card 的剩余秒数，并在第二种情况下更新显示
+      const getRemainSeconds = (card) => {
+        const statEl = card.querySelector(".bili-cover-card__stat:last-child");
+        if (!statEl) return Infinity;
+        // 移除上次注入的剩余时间标签，避免重复计算
+        statEl.querySelector(".wl-remain-tag")?.remove();
+        const text = statEl.textContent.trim();
+        if (text === "已看完") return 0;
+        if (text.includes("/")) {
+          const [played, total] = text.split("/");
+          const remain = parseSeconds(total) - parseSeconds(played);
+          const tag = statEl.querySelector(".wl-remain-tag");
+          const remainStr = formatSeconds(remain);
+          if (tag) {
+            tag.textContent = `=${remainStr}`;
+          } else {
+            const span = document.createElement("span");
+            span.className = "wl-remain-tag";
+            span.style.cssText = "color:#CC0;margin-left:4px;";
+            span.textContent = `=${remainStr}`;
+            statEl.appendChild(span);
+          }
+          return remain;
+        }
+        return parseSeconds(text);
+      };
+
+      sortBtn.onclick = () => {
+        const container = document.querySelector(".watchlater-list-container");
+        if (!container) {
+          console.warn(`${N}⚠️ 找不到 .watchlater-list-container`);
+          return;
+        }
+        const cards = [...container.querySelectorAll(".video-card")];
+        if (!cards.length) {
+          console.warn(`${N}⚠️ 没有找到 .video-card`);
+          return;
+        }
+        const sorted = cards
+          .map((card) => ({ card, remain: getRemainSeconds(card) }))
+          .sort((a, b) => a.remain - b.remain);
+        sorted.forEach(({ card }) => container.appendChild(card));
+        console.log(`${N}✅ 已按剩余时间排序 ${sorted.length} 个视频`);
+      };
+
       // 获取刷新次数
       const REFRESH_COUNT_KEY = "bilibili_watchlater_refresh_count";
       let refreshCount = parseInt(
@@ -221,6 +325,10 @@
 
       // 2. 视频列表是后加载的，进入页面直接获取不到，所以等5秒后再检查
       setInterval(() => {
+        if (!enabled) {
+          console.log(`${N}自动刷新/跳转已关闭，跳过检查`);
+          return;
+        }
         console.log(`${N}检查稍后播列表是否有视频...`);
 
         // 3. 检查页面上是否有视频卡片（兼容2024和2025版本的选择器）
