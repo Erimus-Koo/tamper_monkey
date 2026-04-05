@@ -911,8 +911,9 @@
     const style = document.createElement("style");
     style.textContent = `
       .bili-dyn-list__item{position:relative}
-      .added-to-watch-later .bili-dyn-item__main{opacity:.35;}
-      .added-to-watch-later .bili-dyn-item__main:hover{opacity:1}
+      body[added-item="transparent"] .added-to-watch-later>div{opacity:.35;}
+      body[added-item="transparent"] .added-to-watch-later>div:hover{opacity:1}
+      body[added-item="hide"] .added-to-watch-later{height:0;overflow:hidden}
       .added-to-watch-later .bili-dyn-card-video__stat:after{
         content:'已加入稍后再看';color:#F69;
       }
@@ -949,11 +950,14 @@
       .last-stop-position:after{
         content:'上次看到这里';position:absolute;top:0;left:50%;transform:translateX(-50%);background:#F33;color:#FFF;padding:.125em .5em;border-radius:0 0 .5em .5em;
       }
-      .last-stop-position .bili-dyn-item{outline:2px solid #F33}
+      .last-stop-position{outline:2px solid #F33;opacity:1!important;height:auto!important;}
       .auto-collect-dialog .buttons{display:flex;gap:12px;margin-top:16px}
       .auto-collect-dialog button{flex:1;padding:10px;border:none;border-radius:6px;cursor:pointer;font-size:14px}
       .auto-collect-dialog .btn-save{background:#00a1d6;color:#fff}
       .auto-collect-dialog .btn-cancel{background:#e5e5e5;color:#666}
+      #added-item-toggle{display:flex;border-radius:6px;gap:2px;overflow:hidden;border:1px solid #00a1d6;}
+      #added-item-toggle button{flex:1;padding:8px 12px;border:none;cursor:pointer;font-size:14px;background:transparent;color:#00a1d6;transition:all .2s;}
+      #added-item-toggle button.active{background:#00a1d6;color:#fff;opacity:1;font-weight:600;}
     `;
     document.head.appendChild(style);
 
@@ -967,6 +971,10 @@
     container.innerHTML = `
       <button class="auto-collect-btn" id="btn-run">${icons.play}<span>开始</span></button>
       <button class="auto-collect-btn" id="btn-settings">${icons.settings}<span>设置</span></button>
+      <div id="added-item-toggle">
+        <button data-mode="transparent">淡</button>
+        <button data-mode="hide">隐</button>
+      </div>
     `;
     document.body.appendChild(container);
 
@@ -1190,6 +1198,22 @@
     modal.onclick = (e) => {
       if (e.target === modal) modal.classList.remove("show");
     };
+
+    // 初始化 added-item 显示模式
+    const ADDED_ITEM_MODE_KEY = "added_item_mode";
+    const applyAddedItemMode = (mode) => {
+      document.body.setAttribute("added-item", mode);
+      container.querySelectorAll("#added-item-toggle button").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.mode === mode);
+      });
+      GM_setValue(ADDED_ITEM_MODE_KEY, mode);
+      console.log(`${N}🎛️ 已切换显示模式: ${mode}`);
+    };
+    const savedMode = GM_getValue(ADDED_ITEM_MODE_KEY, "transparent");
+    applyAddedItemMode(savedMode);
+    container.querySelectorAll("#added-item-toggle button").forEach((btn) => {
+      btn.onclick = () => applyAddedItemMode(btn.dataset.mode);
+    });
     document.getElementById("btn-run").oncontextmenu = (e) => {
       e.preventDefault();
       if (confirm("确定要从头开始扫描吗？")) startAutoCollect(true);
