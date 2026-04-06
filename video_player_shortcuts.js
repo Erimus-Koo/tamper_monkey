@@ -66,10 +66,13 @@ z: 播放恢复原速
       `.notification[data-target="${notiName}"]`,
     );
     if (notificationElement) {
-      // console.debug("⚠️ notify existed");
       clearTimeout(notifyDelay);
     } else {
-      // create notification
+      // 清理其他容器里可能残留的同名通知
+      document
+        .querySelectorAll(`.notification[data-target="${notiName}"]`)
+        .forEach((el) => el.remove());
+      clearTimeout(notifyDelay);
       notificationElement = document.createElement("div");
       notificationElement.className = "notification";
       notificationElement.setAttribute("data-target", notiName);
@@ -109,29 +112,28 @@ z: 播放恢复原速
       notificationElement.innerHTML = content;
     }
 
-    // 消息出现的定位点
-    notificationElement.style.left = `${offsetX}px`;
-    notificationElement.style.top = `${offsetY}px`;
-    console.log(
-      `${LOG_PREFIX}Notification position - left: ${offsetX}px, top: ${offsetY}px`,
-    );
-    console.log(`${LOG_PREFIX}Notification container:`, container);
-    console.log(`${LOG_PREFIX}Notification element:`, notificationElement);
-
-    // 添加样式
+    // 添加样式（含默认 left/top，行内样式只在有特殊偏移时覆盖）
     const existingStyle = document.querySelector(
       `style[data-target="${notiName}"]`,
     );
     if (!existingStyle) {
       const style = document.createElement("style");
-      style.textContent = `.${notificationElement.className}{
+      style.textContent = `.notification[data-target="${notiName}"]{
       position:absolute;z-index:999999;
-      font-size:16px;color:#fff;background:#000c;
-      padding:.5em 1em;border-radius:.5em;
+      left:20px;top:20px;
+      font:14px/1.25 'JetBrains Mono',Consolas,Menlo,sans-serif;
+      color:#fff;background:#000c;
+      padding:.5em .75em;border-radius:.5em;
     }`;
       style.setAttribute("data-target", notiName);
       document.head.appendChild(style);
     }
+
+    // 仅在非默认偏移时才用行内样式覆盖
+    if (offsetX !== 20) notificationElement.style.left = `${offsetX}px`;
+    else notificationElement.style.removeProperty("left");
+    if (offsetY !== 20) notificationElement.style.top = `${offsetY}px`;
+    else notificationElement.style.removeProperty("top");
 
     // 设置浮窗的淡出效果
     const actualDelay = notifyDebugMode ? 999999 : delay;
@@ -149,7 +151,7 @@ z: 播放恢复原速
     if (!videoObj) return;
     if (videoObj.playbackRate === speed) return;
     videoObj.playbackRate = speed;
-    const content = `播放速度: ${speed}<br><span style="color:#f90;font-size:.9em;font-family:'JetBrains Mono',Consolas,Menlo,sans-serif;white-space:nowrap">C:加速 V:减速 Z:还原</span>`;
+    const content = `播放速度: ${speed}<br><span style="color:#f90;font-size:.9em;white-space:nowrap">C:加速 V:减速 Z:还原</span>`;
     if (videoObj instanceof HTMLVideoElement) {
       // video: 在较小的视频 如GIF 表情包等场景下 不提示
       if (videoObj.offsetWidth > 200 && videoObj.offsetHeight > 200) {
@@ -258,15 +260,15 @@ z: 播放恢复原速
     v: () => changePlaySpeed(-0.1), //减速
     z: () => changePlaySpeed(99), //toggle 默认速度
     // 调试用：Shift+C/V/Z 永久显示notify（方便排查位置问题）
-    C: () => {
+    "C,Shift": () => {
       notifyDebugMode = true;
       changePlaySpeed(0.1);
     },
-    V: () => {
+    "Shift,V": () => {
       notifyDebugMode = true;
       changePlaySpeed(-0.1);
     },
-    Z: () => {
+    "Shift,Z": () => {
       notifyDebugMode = true;
       changePlaySpeed(99);
     },
