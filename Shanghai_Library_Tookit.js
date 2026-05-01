@@ -40,15 +40,15 @@
     // 读取作者
     const authorList = Array.from(
       document.querySelectorAll(
-        'span.author-data[property="author"],span.author-data[property="creator"]'
-      )
+        'span.author-data[property="author"],span.author-data[property="creator"]',
+      ),
     )?.map((a) => a.querySelector("a").textContent.trim());
     console.debug(`${N}authorList:`, authorList);
 
     // 读取译者等
     let contributorDict = {};
     Array.from(
-      document.querySelectorAll('span.author-data[property="contributor"]')
+      document.querySelectorAll('span.author-data[property="contributor"]'),
     ).forEach((a) => {
       let name = a.querySelector("a")?.textContent.trim();
       let role = a
@@ -100,6 +100,7 @@ ISBN: "${metaDict["ISBN"]}"
 上图网址: ${url}
 tags: 
 ${contributorMeta}
+coverUrl: ${cover}
 ---
 
 # ${title}
@@ -137,7 +138,7 @@ ${contributorMeta}
   function observe_and_run(
     selector,
     runAfterElementFound,
-    autoDisconnect = true
+    autoDisconnect = true,
   ) {
     console.log(`Start Observing`);
     const handledElements = new Set();
@@ -228,7 +229,7 @@ ${contributorMeta}
     GM_addStyle(`*[available="false"]{opacity:.5;}`);
     // 点击预约后出现的弹窗 被嵌套在场馆里 需要特殊处理让它不透明
     GM_addStyle(
-      `*[available="false"]:has(#placeHoldRemind[style="display: block;"]){opacity:1;}`
+      `*[available="false"]:has(#placeHoldRemind[style="display: block;"]){opacity:1;}`,
     );
   }
 
