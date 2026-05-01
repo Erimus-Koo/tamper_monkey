@@ -70,6 +70,7 @@
     for (role in contributorDict) {
       contributorMeta += `${role}:\n`;
       contributorMeta += list2yaml(contributorDict[role]);
+      contributorMeta += `\n`;
     }
 
     // 获取通用信息
