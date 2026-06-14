@@ -515,6 +515,7 @@
       if (line.includes("-----")) continue;
 
       // 检查是否有条件 {title:xxx,time:<600}
+      // 标题条件支持正则表达式：以/开头和结尾，如 {title:/测试.*视频/,time:<600}
       const condMatch = line.match(/\{([^\}]+)\}/);
 
       if (condMatch) {
@@ -739,6 +740,36 @@
     return true;
   };
 
+  // 检查标题条件（支持正则表达式）
+  const checkTitleCondition = (title, condition) => {
+    if (!condition || !title) return true;
+
+    console.log(`${N}📝 检查标题条件: "${title}" vs "${condition}"`);
+
+    // 检查是否是正则表达式模式（以/开头并以/结尾）
+    if (condition.startsWith("/") && condition.endsWith("/")) {
+      try {
+        // 提取正则表达式（去掉首尾的/）
+        const regexPattern = condition.slice(1, -1);
+        // 创建正则表达式对象
+        const regex = new RegExp(regexPattern, "i"); // 'i' 表示不区分大小写
+        const result = regex.test(title);
+        console.log(`${N}📝 正则匹配: ${regexPattern} => ${result}`);
+        return result;
+      } catch (error) {
+        console.error(`${N}❌ 正则表达式错误 "${condition}":`, error);
+        // 如果正则表达式无效，回退到简单的包含检查
+        console.log(`${N}📝 正则无效，回退到包含检查`);
+        return title.includes(condition);
+      }
+    } else {
+      // 普通字符串：使用包含检查（保持向后兼容）
+      const result = title.includes(condition);
+      console.log(`${N}📝 包含检查: "${condition}" => ${result}`);
+      return result;
+    }
+  };
+
   // 检查是否应该跳过
   const shouldSkip = (item) => {
     const authorEle = item.querySelector(".bili-dyn-title__text");
@@ -794,10 +825,10 @@
       const { title: titleCond, time: timeCond } = authorConfig.conditions;
       console.log(`${N}   检查条件:`, authorConfig.conditions);
 
-      // 检查标题条件
-      if (titleCond && !videoTitle.includes(titleCond)) {
+      // 检查标题条件（支持正则表达式）
+      if (titleCond && !checkTitleCondition(videoTitle, titleCond)) {
         console.log(
-          `${N}   ❌ 标题不匹配: 需要包含 "${titleCond}", 实际标题 "${videoTitle}"`,
+          `${N}   ❌ 标题不匹配: 需要匹配 "${titleCond}", 实际标题 "${videoTitle}"`,
         );
         return false;
       }
@@ -1401,3 +1432,48 @@
   init();
   // -------------------------------------------------- init - END
 })();
+
+/*
+========================================================
+正则表达式标题条件使用示例：
+========================================================
+
+原始包含语法（保持兼容）：
+  作者名 {title:关键词,time:<600}
+  示例：张三 {title:教程,time:<600}
+  匹配：标题中包含"教程"的视频
+
+正则表达式语法：
+  作者名 {title:/正则表达式/,time:<600}
+  
+  示例1：张三 {title:/教程.*Python/,time:<600}
+  匹配：标题以"教程"开头，后面跟着"Python"（中间可以有任意字符）
+  
+  示例2：李四 {title:/^(入门|基础).*教程$/,time:300-600}
+  匹配：标题以"入门"或"基础"开头，以"教程"结尾
+  
+  示例3：王五 {title:/[Ss]pring/,time:>300}
+  匹配：标题包含"Spring"或"spring"（不区分大小写）
+  
+  示例4：赵六 {title:/\d+个技巧/,time:<300}
+  匹配：标题包含"数字+个技巧"模式，如"3个技巧"、"10个技巧"
+
+正则表达式特殊字符：
+  . 匹配任意单个字符
+  * 匹配前面的字符0次或多次
+  + 匹配前面的字符1次或多次
+  ? 匹配前面的字符0次或1次
+  ^ 匹配字符串开头
+  $ 匹配字符串结尾
+  [] 字符集，匹配其中任意一个字符
+  | 或，匹配多个模式中的一个
+  \d 匹配数字
+  \w 匹配字母、数字、下划线
+  \s 匹配空白字符
+
+注意：
+  1. 正则表达式必须用/开头和结尾
+  2. 匹配时不区分大小写（使用'i'标志）
+  3. 如果正则表达式无效，会回退到包含检查
+  4. 斜杠/需要用转义字符\/表示
+*/
