@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Copy Tweet to Markdown
 // @namespace    https://greasyfork.org/users/46393
-// @version      0.1.5
+// @version      0.1.6
 // @description  Copy the tweet in markdown format
 // @author       Erimus
 // @match        https://x.com/*
@@ -388,6 +388,7 @@
         border-radius: 16px;
         border: 1px solid rgb(75, 78, 82);
         cursor: pointer;
+        background: none;
         box-shadow: rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px;
         overflow: hidden;
         transform: scale(.5);

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better NotebookLM
 // @namespace    http://tampermonkey.net/
-// @version      0.0.4
+// @version      0.0.6
 // @description  Save and restore textarea content
 // @author       Erimus
 // @match        https://notebooklm.google.com/*
@@ -136,7 +136,8 @@ README
       console.log("Save button added successfully", saveBtn);
 
       // 自动填充 textarea（如果有保存的内容）
-      const savedText = localStorage.getItem(STORAGE_KEY) || "";
+      const DEFAULT_PROMPT = `帮我生成播客的完整采访稿。需要用markdown格式，尽量还原对话内容，可以用标题(h2/h3)来划分章节，或者用列表和表格来结构化表达。不需要h1标题，不要用中文序号，不需要特意标注发言人。在最前面加上TLDR和Quotes，这两个用h2。`;
+      const savedText = localStorage.getItem(STORAGE_KEY) || DEFAULT_PROMPT;
       console.log("Attempting to fill textarea with saved text:", savedText);
 
       if (savedText && !textarea.value) {
