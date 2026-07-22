@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Video Player Shortcuts
-// @version      0.2.1
+// @version      0.2.2
 // @description  Add shortcut to video player
 // @author       Erimus
 // @match        *://*
@@ -250,6 +250,14 @@ z: 播放恢复原速
   // -------------------------------------------------- shortcut - START
   let keyPressed = {}; //按下的所有键 目的是为了区分 1 和 ctrl+1 这种情况
 
+  // 穿透 Shadow DOM 找到真实的焦点元素（处理 Home Assistant 等深度嵌套的 Web Component）
+  const getDeepActiveElement = (root = document) => {
+    const active = root.activeElement;
+    if (!active) return null;
+    if (active.shadowRoot) return getDeepActiveElement(active.shadowRoot);
+    return active;
+  };
+
   // 快捷键对应按键
   const shortcutDict = {
     a: videoFullScreen, //全屏
@@ -295,10 +303,12 @@ z: 播放恢复原速
 
   const pressKeyDown = function (e) {
     // 如果光标在输入框里，快捷键不生效
+    // 用 getDeepActiveElement 穿透 Shadow DOM，处理 HA 等 Web Component 的深层嵌套输入框
+    const active = getDeepActiveElement();
     if (
-      e.target.isContentEditable ||
-      e.target.tagName === "TEXTAREA" ||
-      e.target.tagName === "INPUT"
+      active?.isContentEditable ||
+      active?.tagName === "TEXTAREA" ||
+      active?.tagName === "INPUT"
     )
       return;
 
