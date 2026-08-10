@@ -789,6 +789,14 @@
 
   // 处理单个item
   const processItem = async (item, subscribedAuthors, addedIds) => {
+    // 检查是否有折叠提示，如果有则点击展开
+    const foldStatement = item.querySelector(".bili-dyn-item-fold__statement");
+    if (foldStatement) {
+      console.log(`${N}📄 发现折叠提示，点击展开`);
+      foldStatement.click();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
     if (shouldSkip(item)) return false;
 
     const videoId = extractVideoId(item);
