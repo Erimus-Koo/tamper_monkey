@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Shanghai Library Toolkit
-// @version      0.1.0
+// @version      0.1.2
 // @description  Convert Shanghai Library's Book Meta Data to Markdown Front Matter. Filter rent available libraries.
 // @author       Erimus
 // @namespace    https://greasyfork.org/users/46393
@@ -99,9 +99,8 @@ Publication Date: ${metaDict["出版时间"] || metaDict["Publication Dates"]}
 ISBN: "${metaDict["ISBN"]}"
 索书号: ${metaDict["索书号"] || metaDict["Call Number"]}
 上图网址: ${url}
-tags: 
+tags:
 ${contributorMeta}
-coverUrl: ${cover}
 ---
 
 # ${title}
