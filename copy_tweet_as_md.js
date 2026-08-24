@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Copy Tweet to Markdown
 // @namespace    https://greasyfork.org/users/46393
-// @version      0.1.6
+// @version      0.1.7
 // @description  Copy the tweet in markdown format
 // @author       Erimus
 // @match        https://x.com/*
@@ -377,8 +377,8 @@
     style.textContent = `
       .copy-tweet-md-btn {
         position: fixed;
-        bottom: 146px;
-        right: 20px;
+        bottom: 12px;
+        right: 94px;
         width: 55px;
         height: 55px;
         z-index: 9999;
