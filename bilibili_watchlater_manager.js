@@ -1249,7 +1249,17 @@
       };
     });
 
-    document.getElementById("btn-run").onclick = () => {
+    document.getElementById("btn-run").onclick = async () => {
+      // 先同步 Gist 确保 lastStopId 是最新的
+      if (gistData.id && gistData.file && gistData.token) {
+        showToast("⏳ 正在同步最新配置...", "info");
+        await syncGist();
+        // 移除提示
+        document
+          .querySelectorAll(".auto-collect-toast")
+          .forEach((t) => t.remove());
+      }
+
       const data = getStorageData();
 
       // 如果列表为空，打开设置
