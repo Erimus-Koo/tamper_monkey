@@ -672,7 +672,10 @@
         console.log(`${N}👇 Gist 较新，更新本地`);
         data.subscribedAuthorsText = gistConfig.subscribedAuthorsText || "";
         data.subscribedAuthors = parseAuthors(data.subscribedAuthorsText);
-        data.lastStopId = gistConfig.lastStopId || "";
+        // 如果 Gist 有 lastStopId 则使用，否则保留本地的
+        if (gistConfig.lastStopId) {
+          data.lastStopId = gistConfig.lastStopId;
+        }
         data.updateTime = gistConfig.updateTime;
         saveStorageData(data);
 
@@ -1209,17 +1212,17 @@
             <h4>💾 Gist 云同步</h4>
             <input id="gist-id" placeholder="Gist ID (32位字符)" value="">
             <input id="gist-file" placeholder="文件名 (xxx.yaml)" value="">
-            <input id="gist-token" type="password" placeholder="Token (ghp_...)" value="">
+            <input id="gist-token" placeholder="Token (ghp_...)" value="">
             <button class="btn-gist-sync">从 Gist 同步</button>
           </div>
           <div class="gist-section">
-            <h4>� 设置停止位置</h4>
+            <h4>📍 设置停止位置</h4>
             <input id="last-stop-id" placeholder="输入视频ID (如: BV1xx...)" value="">
             <button class="btn-set-lastid">设置停止位置</button>
             <div class="hint">设置后下次运行将扫描到此视频为止</div>
           </div>
           <div class="gist-section">
-            <h4>�🗑️ 清除记录</h4>
+            <h4>🗑️ 清除记录</h4>
             <button class="btn-clear-record">清除上次停止位置</button>
             <div class="hint">清除后下次运行将从头扫描100条</div>
           </div>
@@ -1391,6 +1394,7 @@
       // 同步到Gist（显示成功提示）
       await syncGist(true);
     };
+
     modal.querySelector(".btn-gist-sync").onclick = async () => {
       // 重新读取 Gist 配置
       const rawGistCfg = GM_getValue(
@@ -1415,12 +1419,17 @@
         const data = getStorageData(); // 重新读取最新数据
         data.subscribedAuthorsText = gistConfig.subscribedAuthorsText || "";
         data.subscribedAuthors = parseAuthors(data.subscribedAuthorsText);
+        // 如果 Gist 有 lastStopId 则使用，否则保留本地的
+        if (gistConfig.lastStopId) {
+          data.lastStopId = gistConfig.lastStopId;
+        }
         data.updateTime = gistConfig.updateTime || "";
         saveStorageData(data);
 
         // 更新界面
         modal.querySelector("#authors-input").value =
           data.subscribedAuthorsText;
+        modal.querySelector("#last-stop-id").value = data.lastStopId || "";
         console.log(`${N}✅ 已从 Gist 同步配置`);
         alert("已从 Gist 同步配置！");
       } catch (error) {
