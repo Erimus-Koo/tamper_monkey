@@ -632,7 +632,7 @@
     }
   };
 
-  const syncGist = async () => {
+  const syncGist = async (showSuccessToast = false) => {
     if (!gistData.id || !gistData.file || !gistData.token) {
       console.log(`${N}Gist 未配置，跳过同步`);
       return;
@@ -653,6 +653,7 @@
       if (data.updateTime > gistConfig.updateTime) {
         const uploadData = {
           subscribedAuthorsText: data.subscribedAuthorsText,
+          lastStopId: data.lastStopId || "",
           updateTime: new Date().toISOString(),
         };
         const message = await uploadGistContent(uploadData);
@@ -661,20 +662,71 @@
         // 更新本地时间
         data.updateTime = uploadData.updateTime;
         saveStorageData(data);
+
+        if (showSuccessToast) {
+          showToast("✅ 已同步到 Gist", "success");
+        }
       }
       // Gist 较新
       else if (gistConfig.updateTime > data.updateTime) {
         console.log(`${N}👇 Gist 较新，更新本地`);
         data.subscribedAuthorsText = gistConfig.subscribedAuthorsText || "";
         data.subscribedAuthors = parseAuthors(data.subscribedAuthorsText);
+        data.lastStopId = gistConfig.lastStopId || "";
         data.updateTime = gistConfig.updateTime;
         saveStorageData(data);
+
+        if (showSuccessToast) {
+          showToast("✅ 已从 Gist 更新", "success");
+        }
       } else {
         console.log(`${N}💚 Gist 和本地时间相同`);
+        if (showSuccessToast) {
+          showToast("✅ 数据已是最新", "success");
+        }
       }
     } catch (error) {
       console.error(`${N}Gist 同步失败:`, error);
+      if (showSuccessToast) {
+        showToast("❌ Gist 同步失败", "error");
+      }
     }
+  };
+
+  // Toast 提示功能
+  const showToast = (message, type = "info") => {
+    const toast = document.createElement("div");
+    toast.className = `auto-collect-toast toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      z-index: 10001;
+      animation: slideDown 0.3s ease;
+    `;
+
+    // 根据类型设置背景色
+    if (type === "success") {
+      toast.style.background = "#28a745";
+    } else if (type === "error") {
+      toast.style.background = "#dc3545";
+    } else {
+      toast.style.background = "#00a1d6";
+    }
+
+    document.body.appendChild(toast);
+
+    // 3秒后自动消失
+    setTimeout(() => {
+      toast.style.animation = "slideUp 0.3s ease";
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
   };
 
   // 提取视频ID和标题
@@ -1003,7 +1055,11 @@
     if (newAddedIds.length > 0) {
       data.addedIds = [...newAddedIds, ...data.addedIds].slice(0, 1000);
     }
+    data.updateTime = new Date().toISOString();
     saveStorageData(data);
+
+    // 同步到 Gist
+    await syncGist();
 
     // 更新页面上的停止位置标记
     if (firstId) {
@@ -1110,6 +1166,10 @@
       #added-item-toggle{display:flex;border-radius:6px;gap:2px;overflow:hidden;border:1px solid #00a1d6;}
       #added-item-toggle button{flex:1;padding:8px 12px;border:none;cursor:pointer;font-size:14px;background:transparent;color:#00a1d6;transition:all .2s;}
       #added-item-toggle button.active{background:#00a1d6;color:#fff;opacity:1;font-weight:600;}
+      /* Toast 动画 */
+      @keyframes slideDown{from{transform:translateX(-50%) translateY(-100%);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+      @keyframes slideUp{from{transform:translateX(-50%) translateY(0);opacity:1}to{transform:translateX(-50%) translateY(-100%);opacity:0}}
+      .auto-collect-toast{font-family:sans-serif;}
     `;
     document.head.appendChild(style);
 
@@ -1212,7 +1272,18 @@
       startAutoCollect(false);
     };
 
-    document.getElementById("btn-settings").onclick = () => {
+    document.getElementById("btn-settings").onclick = async () => {
+      // 显示 loading
+      const loadingToast = showToast("⏳ 正在从 Gist 同步...", "info");
+
+      // 先同步 Gist
+      await syncGist();
+
+      // 移除 loading
+      document
+        .querySelectorAll(".auto-collect-toast")
+        .forEach((t) => t.remove());
+
       // 每次打开设置时重新读取最新数据
       const data = getStorageData();
       modal.querySelector("#authors-input").value =
@@ -1307,8 +1378,8 @@
         `${N}✅ 已保存 ${uniqueAuthors.length} 个订阅作者 (原始: ${authors.length}, 去重: ${authors.length - uniqueAuthors.length})`,
       );
 
-      // 同步到Gist
-      await syncGist();
+      // 同步到Gist（显示成功提示）
+      await syncGist(true);
     };
     modal.querySelector(".btn-gist-sync").onclick = async () => {
       // 重新读取 Gist 配置
@@ -1371,22 +1442,28 @@
       if (confirm("确定要从头开始扫描吗？")) startAutoCollect(true);
     };
 
-    // 页面加载时标记已添加的视频和上次停止位置
-    observe_and_run(
-      ".bili-dyn-list__item",
-      (item) => {
-        const data = getStorageData();
-        const videoId = extractVideoId(item);
-        if (videoId && data.addedIds.includes(videoId)) {
-          item.classList.add("added-to-watch-later");
-        }
-        // 标记上次停止位置（只要扫描过就标记，不一定要添加过）
-        if (videoId && data.lastStopId && videoId === data.lastStopId) {
-          item.classList.add("last-stop-position");
-        }
-      },
-      false,
-    );
+    // 初始化时先同步 Gist，然后再设置 DOM 观察器
+    (async () => {
+      // 先同步 Gist（包括 lastStopId）
+      await syncGist();
+
+      // 页面加载时标记已添加的视频和上次停止位置
+      observe_and_run(
+        ".bili-dyn-list__item",
+        (item) => {
+          const data = getStorageData();
+          const videoId = extractVideoId(item);
+          if (videoId && data.addedIds.includes(videoId)) {
+            item.classList.add("added-to-watch-later");
+          }
+          // 标记上次停止位置（只要扫描过就标记，不一定要添加过）
+          if (videoId && data.lastStopId && videoId === data.lastStopId) {
+            item.classList.add("last-stop-position");
+          }
+        },
+        false,
+      );
+    })();
 
     // 监听 localStorage 变化（跨 tab 同步）
     window.addEventListener("storage", (e) => {
@@ -1400,9 +1477,6 @@
         }
       }
     });
-
-    // 初始化时同步Gist
-    (async () => await syncGist())();
   };
   // -------------------------------------------------- 自动收藏到稍后播 - END
 
