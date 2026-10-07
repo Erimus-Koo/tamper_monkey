@@ -1,292 +1,196 @@
 // ==UserScript==
 // @name         豆包图片下载
-// @namespace    http://tampermonkey.net/
-// @version      2025-04-25
-// @description  try to take over the world!
-// @author       You
+// @namespace    https://greasyfork.org/users/46393
+// @version      0.1
+// @description  拦截豆包 AI 生图的图片地址，提供下载按钮
+// @author       Erimus
 // @match        https://www.doubao.com/chat/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=doubao.com
 // @grant        none
 // ==/UserScript==
 
-// @require      file://D:\OneDrive\05ProgramProject\tamper_monkey\private\doubao_image_download_button.js
-// @require      file:///Users/erimus/OneDrive/05ProgramProject/tamper_monkey/private/doubao_image_download_button.js
-// @require      https://raw.githubusercontent.com/Erimus-Koo/tamper_monkey/master/private/doubao_image_download_button.js
+// @require      file:///Users/erimus/OneDrive/05ProgramProject/tamper_monkey/doubao_image_download_button.js
+// @require      https://raw.githubusercontent.com/Erimus-Koo/tamper_monkey/master/doubao_image_download_button.js?v=1
+
+/**
+ * 豆包改版后用 canvas 渲染图片，无法直接拿 img.src
+ * 三路拦截：fetch / XHR / Image.src
+ */
 
 (function () {
-  ("use strict");
+  "use strict";
 
-  // 创建按钮
+  const SN = "🖼️ [豆包图片下载]";
+  console.log(SN, "脚本启动");
+
+  let latestUrl = null;
+  let latestSize = null; // bytes，null 表示未知
+
+  function isTargetImageUrl(url) {
+    return typeof url === "string" && url.includes("byteimg.com");
+  }
+
+  function formatSize(bytes) {
+    if (!bytes) return "";
+    if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)}M`;
+    return `${Math.round(bytes / 1024)}K`;
+  }
+
+  function onNewImageCaptured(source, url, size = null) {
+    const shortName = url.split("/").pop().split("?")[0];
+    console.log(SN, `✅ [${source}] ${shortName}`, size ? formatSize(size) : "");
+    latestUrl = url;
+    latestSize = size;
+    updateUI();
+  }
+
+  // ---- 拦截 fetch ----
+  const _originalFetch = window.fetch;
+  window.fetch = function (...args) {
+    const url = (args[0] instanceof Request ? args[0].url : args[0]) || "";
+    if (!isTargetImageUrl(url)) return _originalFetch.apply(this, args);
+    const promise = _originalFetch.apply(this, args);
+    promise.then((res) => {
+      const size = parseInt(res.headers.get("content-length") || "0", 10) || null;
+      onNewImageCaptured("fetch", url, size);
+    }).catch(() => {
+      onNewImageCaptured("fetch", url, null);
+    });
+    return promise;
+  };
+
+  // ---- 拦截 XHR ----
+  const _originalOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+    if (isTargetImageUrl(url)) onNewImageCaptured("XHR", url, null);
+    return _originalOpen.apply(this, [method, url, ...rest]);
+  };
+
+  // ---- 拦截 Image.src ----
+  const _OriginalImage = window.Image;
+  window.Image = function (...args) {
+    const img = new _OriginalImage(...args);
+    const _desc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "src");
+    Object.defineProperty(img, "src", {
+      set(val) {
+        if (isTargetImageUrl(val)) onNewImageCaptured("Image.src", val, null);
+        _desc.set.call(this, val);
+      },
+      get() { return _desc.get.call(this); },
+      configurable: true,
+    });
+    return img;
+  };
+  window.Image.prototype = _OriginalImage.prototype;
+
+  // ---- UI ----
+  const wrapper = document.createElement("div");
+  Object.assign(wrapper.style, {
+    position: "fixed",
+    bottom: "8px",
+    right: "8px",
+    zIndex: "9999",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "2px",
+    maxWidth: "80px",
+  });
+
+  // 缩略图：平时显示，hover 时隐藏（不遮挡操作）
+  const thumb = document.createElement("img");
+  Object.assign(thumb.style, {
+    width: "80px",
+    height: "auto",
+    borderRadius: "4px",
+    border: "1px solid #fff4",
+    display: "none",         // 未捕获时不占位
+    opacity: "1",
+    pointerEvents: "none",
+    transition: "opacity 0.15s",
+  });
+  wrapper.appendChild(thumb);
+
+  // 下载按钮：始终可见
   const btn = document.createElement("button");
   btn.innerText = "下载图片";
-  btn.style.position = "fixed";
-  btn.style.bottom = "4px";
-  btn.style.right = "4px";
-  btn.style.zIndex = "9999";
-  btn.style.padding = "0px 8px";
-  btn.style.borderRadius = "4px";
-  btn.style.backgroundColor = "#06f9";
-  btn.style.backdropFilter = "blur(.5rem)";
-  btn.style.color = "white";
-  btn.style.border = "none";
-  btn.style.cursor = "pointer";
+  Object.assign(btn.style, {
+    padding: "2px 10px",
+    borderRadius: "4px",
+    backgroundColor: "#06f9",
+    color: "white",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "12px",
+    lineHeight: "1.5",
+    width: "100%",
+  });
+  wrapper.appendChild(btn);
+  document.body.appendChild(wrapper);
 
-  // 按钮点击事件
+  // hover 时隐藏缩略图，不遮挡按钮操作
+  wrapper.addEventListener("mouseenter", () => {
+    thumb.style.opacity = "0";
+  });
+  wrapper.addEventListener("mouseleave", () => {
+    thumb.style.opacity = "1";
+  });
+
+  function updateUI() {
+    if (!latestUrl) {
+      thumb.style.display = "none";
+      btn.innerText = "下载图片";
+      btn.style.backgroundColor = "#06f9";
+      return;
+    }
+    // 更新缩略图 src（display:block 让它占位，opacity 由 hover 控制）
+    thumb.src = latestUrl;
+    thumb.style.display = "block";
+    // 更新按钮文字
+    const sizeStr = latestSize ? `(${formatSize(latestSize)})` : "";
+    btn.innerText = `下载${sizeStr}`;
+    btn.style.backgroundColor = "#0af9";
+  }
+
   btn.addEventListener("click", function () {
-    const containers = document.querySelectorAll("div#img-content-container");
-    let container = containers[0]; //main preview
-    for (let c of containers) {
-      if (
-        c.querySelector('div[class^="right-icon"') ||
-        c.querySelector('div[class^="left-icon"')
-      ) {
-        container = c;
-      }
-    }
-
-    // 选择器：data-testid和class都要匹配
-    const img = container.querySelector(
-      'img[data-testid="in_painting_picture"]',
-    );
-    if (!img) {
-      alert("未找到图片元素！");
+    if (!latestUrl) {
+      alert("还没捕获到图片，请滚动到目标图片");
       return;
     }
-    let url = img.src;
-    if (!url) {
-      alert("未找到图片地址！");
-      return;
-    }
+    downloadUrl(latestUrl);
+  });
 
-    // 生成合适的文件名
-    let filename = url.split("/").pop().split("?")[0] || "download.jpg";
-
-    // 创建a标签进行下载
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-
-    // 有些站点需要Blob处理（防止跨域），兼容处理
-    fetch(url)
-      .then((response) => response.blob())
+  function downloadUrl(url) {
+    const filename = url.split("/").pop().split("?")[0] || "download.jpg";
+    console.log(SN, "⬇️ 开始下载:", filename);
+    _originalFetch(url)
+      .then((r) => r.blob())
       .then((blob) => {
-        const objectUrl = window.URL.createObjectURL(blob);
-        a.href = objectUrl;
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
         a.click();
         setTimeout(() => {
-          window.URL.revokeObjectURL(objectUrl);
+          URL.revokeObjectURL(a.href);
           document.body.removeChild(a);
         }, 1500);
       })
-      .catch(() => {
-        // Fallback: 直接下载src，如果失败
-        a.click();
-        document.body.removeChild(a);
+      .catch((err) => {
+        console.error(SN, "下载失败:", err);
+        window.open(url, "_blank");
       });
-  });
+  }
 
-  // 挂载到页面
-  document.body.appendChild(btn);
-
-  // 获取鼠标坐标 用于删除当前对话
-  let mouseX = 0,
-    mouseY = 0;
-  document.addEventListener("mousemove", (e) => {
-    // mouseX = e.clientX;
-    mouseY = e.clientY;
-  });
-  // 点击删除对话按钮
-  const deleteChat = () => {
-    // 获取所有外框（从后向前）
-    const blocks = Array.from(
-      document.querySelectorAll('div[data-testid="message-block-container"]'),
-    );
-    let targetBlock = null;
-    for (let i = blocks.length - 1; i >= 0; i--) {
-      const rect = blocks[i].getBoundingClientRect();
-      if (mouseY >= rect.top && mouseY <= rect.bottom) {
-        targetBlock = blocks[i];
-        break;
-      }
-    }
-    if (!targetBlock) return;
-
-    // 找到外框里的 more 按钮并点击
-    const moreBtn = targetBlock.querySelector(
-      '[data-testid="message_action_more"]',
-    );
-    if (!moreBtn) return;
-    moreBtn.click(); // TODO 无效 需更新
-
-    // 点击二级菜单中的删除
-    setTimeout(() => {
-      const li = document.querySelector(
-        'ul.semi-dropdown-menu li[class*="danger"]',
-      );
-      if (li) {
-        ["mouseover", "mousedown", "mouseup", "click"].forEach((type) => {
-          li.dispatchEvent(
-            new MouseEvent(type, {
-              bubbles: true,
-              cancelable: true,
-              view: window,
-            }),
-          );
-        });
-      }
-    }, 500);
-
-    // 点击确认
-    setTimeout(() => {
-      const confirmBtn = document.querySelector("button.semi-button-danger");
-      confirmBtn?.focus();
-    }, 500);
-  };
-
-  // 快捷键触发（Ctrl+Q 或 Alt+Q），避免输入域中误触发
+  // ---- 快捷键 Ctrl+Q / Alt+Q / Alt+1 ----
   document.addEventListener("keydown", function (e) {
-    // console.log("🚀 ~ e:", e);
-    const isMac = navigator.userAgentData.platform === "macOS";
-    // console.log("🚀 ~ isMac:", isMac);
-    const modifier = isMac ? e.ctrlKey : e.altKey;
-
-    // 复制文本
-    let text = "重新生成20张，比例 「9:16」";
-    // Windows: Alt+V
-    if (modifier && e.key.toLowerCase() === "v") {
-      navigator.clipboard.writeText(text);
-    }
-
-    if (modifier && e.shiftKey && e.key.toLowerCase() === "v") {
-      text = "重新生成36张，比例 「9:16」";
-      navigator.clipboard.writeText(text);
-    }
-
-    // 下载图片 Ctrl+Q 或 Alt+Q
     if (
       (e.ctrlKey && e.key.toLowerCase() === "q") ||
       (e.altKey && e.key.toLowerCase() === "q") ||
       (e.altKey && e.key.toLowerCase() === "1")
     ) {
-      console.log("下载图片触发快捷键");
+      console.log(SN, "⌨️ 快捷键触发下载");
       btn.click();
-
-      // 点击原生的下载按钮（下载文件名为对话名）
-      document
-        .querySelector('div[data-testid="edit_image_download_button"]')
-        ?.click();
-    }
-
-    // 重新生成
-    if (modifier && e.key.toLowerCase() === "r") {
-      const btnList = document.querySelectorAll(
-        'button[data-testid="message_action_regenerate"]',
-      );
-      btnList[btnList.length - 1].click();
-    }
-
-    // 到聊天框底部
-    if (modifier && e.shiftKey && e.key.toLowerCase() === "d") {
-      e.preventDefault();
-      document.querySelector('div[class*="to-bottom-button"]')?.click();
-      // 点击最后一条聊天记录的第一张可见图
-      const chats = document.querySelectorAll(
-        'div[data-testid="receive_message"]',
-      );
-      const lastChat = chats[chats.length - 1];
-      lastChat?.focus();
-
-      if (lastChat) {
-        const images = lastChat.querySelectorAll(
-          'div[data-testid="mdbox_image"]',
-        );
-        for (const imgDiv of images) {
-          // 判断可见性
-          const rect = imgDiv.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0) {
-            imgDiv.click();
-            // console.log("imgDiv:", imgDiv, imgDiv.offsetParent);
-            break; // 只点击第一个可见的
-          }
-        }
-      }
-    }
-
-    // 删除最后一条聊天
-    if (modifier && e.key.toLowerCase() === "x") {
-      deleteChat();
-    }
-
-    // --------------------------------------------------- 以下快捷键需要离开输入域才触发
-    // 排除在输入、文本区域 或 可编辑内容中触发
-    const tag = (
-      (document.activeElement && document.activeElement.tagName) ||
-      ""
-    ).toLowerCase();
-    if (
-      ["input", "textarea", "select"].includes(tag) ||
-      document.activeElement.isContentEditable
-    )
-      return;
-
-    // 左按钮: Shift+Left
-    // if (e.key === "ArrowLeft" || e.code === "ArrowLeft") {
-    //   document
-    //     .querySelector('div[class*="left-icon"][class*="icon-wrapper"]')
-    //     ?.click();
-    // }
-
-    // 右按钮: Shift+Right
-    // if (e.key === "ArrowRight" || e.code === "ArrowRight") {
-    //   document
-    //     .querySelector('div[class*="right-icon"][class*="icon-wrapper"]')
-    //     ?.click();
-    // }
-  });
-
-  // 让缩略图可以被Vimnium点击 -------------------------------- START
-  const imgSelector = 'div[data-testid="mdbox_image"]';
-  // 封装处理函数
-  function makeClickable(node) {
-    // 避免重复处理
-    if (node.dataset.vimnumReady) return;
-    node.dataset.vimnumReady = "1";
-
-    // 增加可聚焦性
-    node.setAttribute("tabindex", "0");
-    // 增加 role，让 Vimium 能检索到
-    node.setAttribute("role", "button");
-    // 改变鼠标指针
-    node.style.cursor = "pointer";
-  }
-
-  // 处理已有元素
-  document.querySelectorAll(imgSelector).forEach(makeClickable);
-
-  // 观察新增元素
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      mutation.addedNodes.forEach((node) => {
-        if (node.nodeType === 1) {
-          // 是元素
-          if (node.matches && node.matches(imgSelector)) {
-            makeClickable(node);
-          }
-          // 如果是容器，处理下属结点
-          node.querySelectorAll &&
-            node.querySelectorAll(imgSelector).forEach(makeClickable);
-        }
-      });
     }
   });
-
-  observer.observe(document.body, { childList: true, subtree: true });
-  // 让缩略图可以被Vimnium点击 -------------------------------- END
-
-  // 自动点击图片生成 -------------------------------- START
-  // if (location.href.replace(/\/$/, "") === "https://www.doubao.com/chat") {
-  //   window.location.href = "https://www.doubao.com/chat/create-image";
-  // }
-  // 自动点击图片生成 -------------------------------- END
 })();
